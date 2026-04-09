@@ -9,6 +9,7 @@
 mod init;
 mod input;
 mod render;
+mod status_bar;
 
 use std::collections::BTreeSet;
 use std::env;
@@ -3417,19 +3418,67 @@ impl LiveCli {
         &self,
         emit_output: bool,
     ) -> Result<(BuiltRuntime, HookAbortMonitor), Box<dyn std::error::Error>> {
+        self.prepare_turn_runtime_inner(emit_output, None, None)
+    }
+
+    fn prepare_turn_runtime_with_status_bar(
+        &self,
+        emit_output: bool,
+        sb_handle: status_bar::StatusBarHandle,
+        sb_output_lock: std::sync::Arc<std::sync::Mutex<()>>,
+    ) -> Result<(BuiltRuntime, HookAbortMonitor), Box<dyn std::error::Error>> {
+        self.prepare_turn_runtime_inner(emit_output, Some(sb_handle), Some(sb_output_lock))
+    }
+
+    fn prepare_turn_runtime_inner(
+        &self,
+        emit_output: bool,
+        sb_handle: Option<status_bar::StatusBarHandle>,
+        sb_output_lock: Option<std::sync::Arc<std::sync::Mutex<()>>>,
+    ) -> Result<(BuiltRuntime, HookAbortMonitor), Box<dyn std::error::Error>> {
         let hook_abort_signal = runtime::HookAbortSignal::new();
-        let runtime = build_runtime(
-            self.runtime.session().clone(),
+        let runtime_plugin_state = build_runtime_plugin_state()?;
+        let RuntimePluginState {
+            feature_config,
+            tool_registry,
+            plugin_registry,
+            mcp_state,
+        } = runtime_plugin_state;
+        plugin_registry.initialize()?;
+        let policy = permission_policy(self.permission_mode, &feature_config, &tool_registry)
+            .map_err(std::io::Error::other)?;
+
+        let mut api_client = AnthropicRuntimeClient::new(
             &self.session.id,
             self.model.clone(),
-            self.system_prompt.clone(),
             true,
             emit_output,
             self.allowed_tools.clone(),
-            self.permission_mode,
+            tool_registry.clone(),
             None,
-        )?
-        .with_hook_abort_signal(hook_abort_signal.clone());
+        )?;
+        if let (Some(h), Some(l)) = (sb_handle, sb_output_lock) {
+            api_client = api_client.with_status_bar(h, l);
+        }
+
+        let mut runtime = ConversationRuntime::new_with_features(
+            self.runtime.session().clone(),
+            api_client,
+            CliToolExecutor::new(
+                self.allowed_tools.clone(),
+                emit_output,
+                tool_registry.clone(),
+                mcp_state.clone(),
+            ),
+            policy,
+            self.system_prompt.clone(),
+            &feature_config,
+        );
+        if emit_output {
+            runtime = runtime.with_hook_progress_reporter(Box::new(CliHookProgressReporter));
+        }
+        let runtime = BuiltRuntime::new(runtime, plugin_registry, mcp_state)
+            .with_hook_abort_signal(hook_abort_signal.clone());
         let hook_abort_monitor = HookAbortMonitor::spawn(hook_abort_signal);
 
         Ok((runtime, hook_abort_monitor))
@@ -3442,29 +3491,21 @@ impl LiveCli {
     }
 
     fn run_turn(&mut self, input: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let mut spinner = Spinner::new();
-        let mut stdout = io::stdout();
-        spinner.tick(
-            "⏳ Thinking...",
-            TerminalRenderer::new().color_theme(),
-            &mut stdout,
+        let mut status_bar = status_bar::StatusBar::new();
+
+        let (mut runtime, hook_abort_monitor) = self.prepare_turn_runtime_with_status_bar(
+            true,
+            status_bar.handle(),
+            status_bar.output_lock(),
         )?;
-        let (mut runtime, hook_abort_monitor) = self.prepare_turn_runtime(true)?;
-        // Stop animation before streaming starts
-        spinner.finish(
-            "⏳ Generating...",
-            &TerminalRenderer::new().color_theme(),
-            &mut stdout,
-        )?;
+
         let mut permission_prompter = CliPermissionPrompter::new(self.permission_mode);
         let result = runtime.run_turn(input, Some(&mut permission_prompter));
         hook_abort_monitor.stop();
         match result {
             Ok(summary) => {
+                status_bar.freeze_done();
                 self.replace_runtime(runtime)?;
-                // Done message after streaming completes
-                write!(stdout, "\r\x1b[2K\x1b[38;5;208m✔ ✨ Done\x1b[0m\n")?;
-                stdout.flush()?;
                 println!();
                 if let Some(event) = summary.auto_compaction {
                     println!(
@@ -3476,9 +3517,8 @@ impl LiveCli {
                 Ok(())
             }
             Err(error) => {
+                status_bar.freeze_error(&error.to_string());
                 runtime.shutdown_plugins()?;
-                write!(stdout, "\r\x1b[2K\x1b[31m✘ ❌ Request failed\x1b[0m\n")?;
-                stdout.flush()?;
                 Err(Box::new(error))
             }
         }
@@ -6381,6 +6421,8 @@ struct AnthropicRuntimeClient {
     allowed_tools: Option<AllowedToolSet>,
     tool_registry: GlobalToolRegistry,
     progress_reporter: Option<InternalPromptProgressReporter>,
+    status_bar: Option<status_bar::StatusBarHandle>,
+    status_bar_output_lock: Option<std::sync::Arc<std::sync::Mutex<()>>>,
 }
 
 impl AnthropicRuntimeClient {
@@ -6445,7 +6487,19 @@ impl AnthropicRuntimeClient {
             allowed_tools,
             tool_registry,
             progress_reporter,
+            status_bar: None,
+            status_bar_output_lock: None,
         })
+    }
+
+    fn with_status_bar(
+        mut self,
+        handle: status_bar::StatusBarHandle,
+        output_lock: std::sync::Arc<std::sync::Mutex<()>>,
+    ) -> Self {
+        self.status_bar = Some(handle);
+        self.status_bar_output_lock = Some(output_lock);
+        self
     }
 }
 
@@ -6543,8 +6597,15 @@ impl AnthropicRuntimeClient {
             })?;
         let mut stdout = io::stdout();
         let mut sink = io::sink();
+        let mut sb_writer = match (&self.status_bar, &self.status_bar_output_lock) {
+            (Some(h), Some(l)) => Some(status_bar::StatusBarWriter::new(h.clone(), l.clone())),
+            _ => None,
+        };
         let out: &mut dyn Write = if self.emit_output {
-            &mut stdout
+            match sb_writer.as_mut() {
+                Some(w) => w,
+                None => &mut stdout,
+            }
         } else {
             &mut sink
         };
@@ -6605,6 +6666,11 @@ impl AnthropicRuntimeClient {
                 ApiStreamEvent::ContentBlockDelta(delta) => match delta.delta {
                     ContentBlockDelta::TextDelta { text } => {
                         if !text.is_empty() {
+                            if let Some(h) = &self.status_bar {
+                                if let Ok(mut s) = h.lock() {
+                                    s.phase = status_bar::StatusPhase::Streaming;
+                                }
+                            }
                             if let Some(progress_reporter) = &self.progress_reporter {
                                 progress_reporter.mark_text_phase(&text);
                             }
@@ -6622,6 +6688,12 @@ impl AnthropicRuntimeClient {
                         }
                     }
                     ContentBlockDelta::ThinkingDelta { .. } => {
+                        if let Some(h) = &self.status_bar {
+                            if let Ok(mut s) = h.lock() {
+                                s.thinking_seconds =
+                                    Some(s.started_at.elapsed().as_secs_f32());
+                            }
+                        }
                         if !block_has_thinking_summary {
                             render_thinking_block_summary(out, None, false)?;
                             block_has_thinking_summary = true;
@@ -6637,6 +6709,16 @@ impl AnthropicRuntimeClient {
                             .map_err(|error| RuntimeError::new(error.to_string()))?;
                     }
                     if let Some((id, name, input)) = pending_tool.take() {
+                        if let Some(h) = &self.status_bar {
+                            if let Ok(mut s) = h.lock() {
+                                s.phase = status_bar::StatusPhase::ToolRunning(name.clone());
+                                s.tool_log.push(status_bar::ToolActivity {
+                                    name: name.clone(),
+                                    summary: input.chars().take(60).collect(),
+                                    duration: std::time::Duration::ZERO,
+                                });
+                            }
+                        }
                         if let Some(progress_reporter) = &self.progress_reporter {
                             progress_reporter.mark_tool_phase(&name, &input);
                         }
@@ -6648,6 +6730,11 @@ impl AnthropicRuntimeClient {
                     }
                 }
                 ApiStreamEvent::MessageDelta(delta) => {
+                    if let Some(h) = &self.status_bar {
+                        if let Ok(mut s) = h.lock() {
+                            s.output_tokens = delta.usage.output_tokens;
+                        }
+                    }
                     events.push(AssistantEvent::Usage(delta.usage.token_usage()));
                 }
                 ApiStreamEvent::MessageStop(_) => {
