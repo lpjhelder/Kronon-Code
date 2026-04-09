@@ -200,8 +200,16 @@ fn prepare_command(
         return prepared;
     }
 
-    let mut prepared = Command::new("sh");
-    prepared.arg("-lc").arg(command).current_dir(cwd);
+    let mut prepared = if cfg!(windows) {
+        let mut cmd = Command::new("cmd.exe");
+        cmd.args(["/C", command]);
+        cmd
+    } else {
+        let mut cmd = Command::new("sh");
+        cmd.arg("-lc").arg(command);
+        cmd
+    };
+    prepared.current_dir(cwd);
     if sandbox_status.filesystem_active {
         prepared.env("HOME", cwd.join(".sandbox-home"));
         prepared.env("TMPDIR", cwd.join(".sandbox-tmp"));
@@ -227,8 +235,16 @@ fn prepare_tokio_command(
         return prepared;
     }
 
-    let mut prepared = TokioCommand::new("sh");
-    prepared.arg("-lc").arg(command).current_dir(cwd);
+    let mut prepared = if cfg!(windows) {
+        let mut cmd = TokioCommand::new("cmd.exe");
+        cmd.args(["/C", command]);
+        cmd
+    } else {
+        let mut cmd = TokioCommand::new("sh");
+        cmd.arg("-lc").arg(command);
+        cmd
+    };
+    prepared.current_dir(cwd);
     if sandbox_status.filesystem_active {
         prepared.env("HOME", cwd.join(".sandbox-home"));
         prepared.env("TMPDIR", cwd.join(".sandbox-tmp"));
