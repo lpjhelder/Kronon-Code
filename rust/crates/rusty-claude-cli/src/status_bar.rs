@@ -4,9 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use crossterm::cursor::{MoveTo, RestorePosition, SavePosition};
-use crossterm::terminal::{self, Clear, ClearType};
-use crossterm::{execute, style::Print};
+use crossterm::terminal;
 
 // Orange pulse tones for animation
 const ORANGE_PULSE: [u8; 8] = [166, 172, 208, 214, 220, 214, 208, 172];
@@ -33,8 +31,11 @@ pub struct StatusBarState {
     pub phase: StatusPhase,
     pub started_at: Instant,
     pub output_tokens: u32,
+    pub estimated_tokens: u32,
     pub thinking_seconds: Option<f32>,
     pub tool_log: Vec<ToolActivity>,
+    /// True when the status bar line has been printed and needs clearing before content
+    pub line_visible: bool,
 }
 
 impl StatusBarState {
@@ -43,8 +44,10 @@ impl StatusBarState {
             phase: StatusPhase::Thinking,
             started_at: Instant::now(),
             output_tokens: 0,
+            estimated_tokens: 0,
             thinking_seconds: None,
             tool_log: Vec::new(),
+            line_visible: false,
         }
     }
 }
@@ -53,8 +56,8 @@ pub type StatusBarHandle = Arc<Mutex<StatusBarState>>;
 
 // --- Rendering ---
 
-fn render_status_line(state: &StatusBarState, frame: usize, width: u16) -> String {
-    let raw = match &state.phase {
+fn render_status_line(state: &StatusBarState, frame: usize) -> String {
+    match &state.phase {
         StatusPhase::Thinking => {
             let elapsed = state.started_at.elapsed().as_secs();
             let tone = ORANGE_PULSE[frame % ORANGE_PULSE.len()];
@@ -62,7 +65,11 @@ fn render_status_line(state: &StatusBarState, frame: usize, width: u16) -> Strin
         }
         StatusPhase::Streaming => {
             let elapsed = state.started_at.elapsed().as_secs();
-            let tokens = state.output_tokens;
+            let tokens = if state.output_tokens > 0 {
+                state.output_tokens
+            } else {
+                state.estimated_tokens
+            };
             let tone = ORANGE_PULSE[frame % ORANGE_PULSE.len()];
             let thinking = state
                 .thinking_seconds
@@ -80,7 +87,11 @@ fn render_status_line(state: &StatusBarState, frame: usize, width: u16) -> Strin
         }
         StatusPhase::Done => {
             let elapsed = state.started_at.elapsed().as_secs();
-            let tokens = state.output_tokens;
+            let tokens = if state.output_tokens > 0 {
+                state.output_tokens
+            } else {
+                state.estimated_tokens
+            };
             let tools = state.tool_log.len();
             format!(
                 "\x1b[90m\u{00b7} Done ({elapsed}s \u{00b7} \u{2193} {tokens} tokens \u{00b7} {tools} tool calls)\x1b[0m"
@@ -89,19 +100,17 @@ fn render_status_line(state: &StatusBarState, frame: usize, width: u16) -> Strin
         StatusPhase::Error(msg) => {
             format!("\x1b[31m\u{2718} {msg}\x1b[0m")
         }
-    };
-    // Truncate to terminal width (accounting for ANSI escape codes)
-    // Simple approach: just cap the visible string. ANSI codes are invisible.
-    let _ = width; // Width used for future truncation logic
-    raw
+    }
 }
 
 // --- StatusBarWriter ---
 
+/// Writer that wraps stdout. Before each write, clears the status bar line
+/// so content appears cleanly. The heartbeat thread repaints the status bar
+/// in the gaps between writes.
 pub struct StatusBarWriter {
     handle: StatusBarHandle,
     output_lock: Arc<Mutex<()>>,
-    frame: usize,
 }
 
 impl StatusBarWriter {
@@ -109,23 +118,7 @@ impl StatusBarWriter {
         Self {
             handle,
             output_lock,
-            frame: 0,
         }
-    }
-
-    fn repaint_status_bar(&self, stdout: &mut io::Stdout) -> io::Result<()> {
-        let (width, height) = terminal::size().unwrap_or((80, 24));
-        let state = self.handle.lock().unwrap();
-        let line = render_status_line(&state, self.frame, width);
-        execute!(
-            stdout,
-            SavePosition,
-            MoveTo(0, height - 1),
-            Clear(ClearType::CurrentLine),
-            Print(line),
-            RestorePosition
-        )?;
-        Ok(())
     }
 }
 
@@ -134,24 +127,19 @@ impl Write for StatusBarWriter {
         let _guard = self.output_lock.lock().unwrap();
         let mut stdout = io::stdout();
 
-        // 1. Clear the status bar line so content can use the full terminal
-        let (_, height) = terminal::size().unwrap_or((80, 24));
-        execute!(
-            stdout,
-            SavePosition,
-            MoveTo(0, height - 1),
-            Clear(ClearType::CurrentLine),
-            RestorePosition
-        )?;
+        // If status bar line is visible, clear it first
+        {
+            let mut state = self.handle.lock().unwrap();
+            if state.line_visible {
+                // Move to start of line and clear it
+                write!(stdout, "\r\x1b[2K")?;
+                state.line_visible = false;
+            }
+        }
 
-        // 2. Write the actual content (may cause scrolling)
+        // Write content normally
         let written = stdout.write(buf)?;
         stdout.flush()?;
-
-        // 3. Repaint the status bar at the bottom
-        self.frame = self.frame.wrapping_add(1);
-        self.repaint_status_bar(&mut stdout)?;
-
         Ok(written)
     }
 
@@ -190,25 +178,26 @@ impl StatusBar {
                 }
                 if !hb_pause.load(Ordering::Relaxed) {
                     if let Ok(_guard) = hb_output_lock.try_lock() {
-                        let state = hb_handle.lock().unwrap();
-                        let (width, height) = terminal::size().unwrap_or((80, 24));
-                        let line = render_status_line(&state, frame, width);
-                        drop(state); // Release state lock before writing
-                        let mut stdout = io::stdout();
-                        let _ = execute!(
-                            stdout,
-                            SavePosition,
-                            MoveTo(0, height - 1),
-                            Clear(ClearType::CurrentLine),
-                            Print(line),
-                            RestorePosition
-                        );
-                        let _ = stdout.flush();
+                        if let Ok(mut state) = hb_handle.lock() {
+                            let line = render_status_line(&state, frame);
+                            // Print status bar on a new line using \n, then use \r\x1b[2K
+                            // to clear + \r\x1b[1A to move back up when content needs to write.
+                            // Simpler: just print on current line with \r (overwrite in place)
+                            let mut stdout = io::stdout();
+                            if state.line_visible {
+                                // Overwrite existing status bar in place
+                                let _ = write!(stdout, "\r\x1b[2K{}", line);
+                            } else {
+                                // Print new status bar line
+                                let _ = write!(stdout, "\n{}", line);
+                                state.line_visible = true;
+                            }
+                            let _ = stdout.flush();
+                        }
                     }
-                    // If lock is held by writer, skip this tick
                 }
                 frame = frame.wrapping_add(1);
-                thread::sleep(Duration::from_millis(80));
+                thread::sleep(Duration::from_millis(50));
             }
         });
 
@@ -246,37 +235,33 @@ impl StatusBar {
 
     pub fn freeze_done(&mut self) {
         self.stop_heartbeat();
-        {
-            let mut state = self.handle.lock().unwrap();
-            state.phase = StatusPhase::Done;
+        let _guard = self.output_lock.lock().unwrap();
+        let mut state = self.handle.lock().unwrap();
+        state.phase = StatusPhase::Done;
+        let line = render_status_line(&state, 0);
+        let mut stdout = io::stdout();
+        if state.line_visible {
+            let _ = write!(stdout, "\r\x1b[2K{}", line);
+        } else {
+            let _ = write!(stdout, "\n{}", line);
         }
-        self.repaint_final();
+        state.line_visible = true;
+        let _ = stdout.flush();
     }
 
     pub fn freeze_error(&mut self, msg: &str) {
         self.stop_heartbeat();
-        {
-            let mut state = self.handle.lock().unwrap();
-            state.phase = StatusPhase::Error(msg.to_string());
-        }
-        self.repaint_final();
-    }
-
-    fn repaint_final(&self) {
         let _guard = self.output_lock.lock().unwrap();
-        let state = self.handle.lock().unwrap();
-        let (width, height) = terminal::size().unwrap_or((80, 24));
-        let line = render_status_line(&state, 0, width);
-        drop(state);
+        let mut state = self.handle.lock().unwrap();
+        state.phase = StatusPhase::Error(msg.to_string());
+        let line = render_status_line(&state, 0);
         let mut stdout = io::stdout();
-        let _ = execute!(
-            stdout,
-            SavePosition,
-            MoveTo(0, height - 1),
-            Clear(ClearType::CurrentLine),
-            Print(line),
-            RestorePosition
-        );
+        if state.line_visible {
+            let _ = write!(stdout, "\r\x1b[2K{}", line);
+        } else {
+            let _ = write!(stdout, "\n{}", line);
+        }
+        state.line_visible = true;
         let _ = stdout.flush();
     }
 }
@@ -288,4 +273,9 @@ impl Drop for StatusBar {
             let _ = handle.join();
         }
     }
+}
+
+// Keep for external use but simplified
+pub fn force_repaint(_handle: &StatusBarHandle, _output_lock: &Arc<Mutex<()>>, _frame: usize) {
+    // No-op: heartbeat handles all repainting now
 }

@@ -6669,6 +6669,7 @@ impl AnthropicRuntimeClient {
                             if let Some(h) = &self.status_bar {
                                 if let Ok(mut s) = h.lock() {
                                     s.phase = status_bar::StatusPhase::Streaming;
+                                    s.estimated_tokens += 1;
                                 }
                             }
                             if let Some(progress_reporter) = &self.progress_reporter {
