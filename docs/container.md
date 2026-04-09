@@ -1,4 +1,4 @@
-# Container-first claw-code workflows
+# Container-first Kronon-Code workflows
 
 This repo already had **container detection** in the Rust runtime before this document was added:
 
@@ -22,13 +22,13 @@ From the repository root:
 ### Docker
 
 ```bash
-docker build -t claw-code-dev -f Containerfile .
+docker build -t kronon-code-dev -f Containerfile .
 ```
 
 ### Podman
 
 ```bash
-podman build -t claw-code-dev -f Containerfile .
+podman build -t kronon-code-dev -f Containerfile .
 ```
 
 ## Run `cargo test --workspace` in the container
@@ -42,7 +42,7 @@ docker run --rm -it \
   -v "$PWD":/workspace \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev \
+  kronon-code-dev \
   cargo test --workspace
 ```
 
@@ -53,7 +53,7 @@ podman run --rm -it \
   -v "$PWD":/workspace:Z \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev \
+  kronon-code-dev \
   cargo test --workspace
 ```
 
@@ -68,7 +68,7 @@ docker run --rm -it \
   -v "$PWD":/workspace \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev
+  kronon-code-dev
 ```
 
 ### Podman
@@ -78,7 +78,7 @@ podman run --rm -it \
   -v "$PWD":/workspace:Z \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev
+  kronon-code-dev
 ```
 
 Inside the shell:
@@ -94,7 +94,7 @@ The `sandbox` command is a useful sanity check: inside Docker or Podman it shoul
 
 ## Bind-mount this repo and another repo at the same time
 
-If you want to run `claw` against a second checkout while keeping `claw-code` itself mounted read-write:
+If you want to run `claw` against a second checkout while keeping `Kronon-Code` itself mounted read-write:
 
 ### Docker
 
@@ -104,7 +104,7 @@ docker run --rm -it \
   -v "$HOME/src/other-repo":/repo \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev
+  kronon-code-dev
 ```
 
 ### Podman
@@ -115,7 +115,7 @@ podman run --rm -it \
   -v "$HOME/src/other-repo":/repo:Z \
   -e CARGO_TARGET_DIR=/tmp/claw-target \
   -w /workspace/rust \
-  claw-code-dev
+  kronon-code-dev
 ```
 
 Then, for example:

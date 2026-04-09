@@ -3377,13 +3377,13 @@ impl LiveCli {
             |path| path.display().to_string(),
         );
         format!(
-            "\x1b[38;5;196m\
- ██████╗██╗      █████╗ ██╗    ██╗\n\
-██╔════╝██║     ██╔══██╗██║    ██║\n\
-██║     ██║     ███████║██║ █╗ ██║\n\
-██║     ██║     ██╔══██║██║███╗██║\n\
-╚██████╗███████╗██║  ██║╚███╔███╔╝\n\
- ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝\x1b[0m \x1b[38;5;208mCode\x1b[0m 🦞\n\n\
+            "\
+\x1b[38;5;255m██╗  ██╗██████╗  ██████╗ ███╗   ██╗ ██████╗ ███╗   ██╗\x1b[0m\n\
+\x1b[38;5;223m██║ ██╔╝██╔══██╗██╔═══██╗████╗  ██║██╔═══██╗████╗  ██║\x1b[0m\n\
+\x1b[38;5;216m█████╔╝ ██████╔╝██║   ██║██╔██╗ ██║██║   ██║██╔██╗ ██║\x1b[0m\n\
+\x1b[38;5;214m██╔═██╗ ██╔══██╗██║   ██║██║╚██╗██║██║   ██║██║╚██╗██║\x1b[0m\n\
+\x1b[38;5;208m██║  ██╗██║  ██║╚██████╔╝██║ ╚████║╚██████╔╝██║ ╚████║\x1b[0m\n\
+\x1b[38;5;202m╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚═╝  ╚═══╝\x1b[0m \x1b[38;5;208mCode\x1b[0m ⏳\n\n\
   \x1b[2mModel\x1b[0m            {}\n\
   \x1b[2mPermissions\x1b[0m      {}\n\
   \x1b[2mBranch\x1b[0m           {}\n\
@@ -3442,12 +3442,18 @@ impl LiveCli {
     }
 
     fn run_turn(&mut self, input: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let (mut runtime, hook_abort_monitor) = self.prepare_turn_runtime(true)?;
         let mut spinner = Spinner::new();
         let mut stdout = io::stdout();
         spinner.tick(
-            "🦀 Thinking...",
+            "⏳ Thinking...",
             TerminalRenderer::new().color_theme(),
+            &mut stdout,
+        )?;
+        let (mut runtime, hook_abort_monitor) = self.prepare_turn_runtime(true)?;
+        // Stop animation before streaming starts
+        spinner.finish(
+            "⏳ Generating...",
+            &TerminalRenderer::new().color_theme(),
             &mut stdout,
         )?;
         let mut permission_prompter = CliPermissionPrompter::new(self.permission_mode);
@@ -3456,11 +3462,9 @@ impl LiveCli {
         match result {
             Ok(summary) => {
                 self.replace_runtime(runtime)?;
-                spinner.finish(
-                    "✨ Done",
-                    TerminalRenderer::new().color_theme(),
-                    &mut stdout,
-                )?;
+                // Done message after streaming completes
+                write!(stdout, "\r\x1b[2K\x1b[38;5;208m✔ ✨ Done\x1b[0m\n")?;
+                stdout.flush()?;
                 println!();
                 if let Some(event) = summary.auto_compaction {
                     println!(
@@ -3473,11 +3477,8 @@ impl LiveCli {
             }
             Err(error) => {
                 runtime.shutdown_plugins()?;
-                spinner.fail(
-                    "❌ Request failed",
-                    TerminalRenderer::new().color_theme(),
-                    &mut stdout,
-                )?;
+                write!(stdout, "\r\x1b[2K\x1b[31m✘ ❌ Request failed\x1b[0m\n")?;
+                stdout.flush()?;
                 Err(Box::new(error))
             }
         }

@@ -1,5 +1,9 @@
 use std::fmt::Write as FmtWrite;
 use std::io::{self, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 use crossterm::cursor::{MoveToColumn, RestorePosition, SavePosition};
 use crossterm::style::{Color, Print, ResetColor, SetForegroundColor, Stylize};
@@ -44,52 +48,129 @@ impl Default for ColorTheme {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Spinner {
     frame_index: usize,
+    stop_flag: Option<Arc<AtomicBool>>,
+    anim_handle: Option<thread::JoinHandle<()>>,
+}
+
+impl Default for Spinner {
+    fn default() -> Self {
+        Self { frame_index: 0, stop_flag: None, anim_handle: None }
+    }
 }
 
 impl Spinner {
     const FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+    const ORANGE_PULSE: [u8; 8] = [166, 172, 208, 214, 220, 214, 208, 172];
 
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    fn render_frame(frame_index: usize, label: &str) -> String {
+        let spinner_char = Self::FRAMES[frame_index % Self::FRAMES.len()];
+        let base_tone = Self::ORANGE_PULSE[frame_index % Self::ORANGE_PULSE.len()];
+
+        let char_count = label.chars().count();
+        let cycle_len = char_count + 6;
+        let flash_phase = frame_index % (cycle_len + 25);
+
+        let mut buf = String::with_capacity(label.len() * 15);
+        buf.push_str(&format!("\x1b[38;5;{base_tone}m{spinner_char}\x1b[0m "));
+
+        for (i, ch) in label.chars().enumerate() {
+            let dist = if flash_phase < cycle_len {
+                (flash_phase as isize - i as isize).unsigned_abs()
+            } else {
+                999
+            };
+            let tone = if dist == 0 {
+                255_u8
+            } else if dist == 1 {
+                223_u8
+            } else if dist == 2 {
+                216_u8
+            } else {
+                base_tone
+            };
+            buf.push_str(&format!("\x1b[38;5;{tone}m{ch}"));
+        }
+        buf.push_str("\x1b[0m");
+        buf
+    }
+
     pub fn tick(
         &mut self,
         label: &str,
-        theme: &ColorTheme,
+        _theme: &ColorTheme,
         out: &mut impl Write,
     ) -> io::Result<()> {
-        let frame = Self::FRAMES[self.frame_index % Self::FRAMES.len()];
-        self.frame_index += 1;
-        queue!(
-            out,
-            SavePosition,
-            MoveToColumn(0),
-            Clear(ClearType::CurrentLine),
-            SetForegroundColor(theme.spinner_active),
-            Print(format!("{frame} {label}")),
-            ResetColor,
-            RestorePosition
-        )?;
+        // Stop any existing animation
+        self.stop_animation();
+
+        let stop = Arc::new(AtomicBool::new(false));
+        let stop_clone = stop.clone();
+        let label_owned = label.to_string();
+
+        self.stop_flag = Some(stop);
+        self.anim_handle = Some(thread::spawn(move || {
+            let mut idx = 0usize;
+            let mut stdout = io::stdout();
+            while !stop_clone.load(Ordering::Relaxed) {
+                let rendered = Self::render_frame(idx, &label_owned);
+                let _ = queue!(
+                    stdout,
+                    SavePosition,
+                    MoveToColumn(0),
+                    Clear(ClearType::CurrentLine),
+                    Print(&rendered),
+                    RestorePosition
+                );
+                let _ = stdout.flush();
+                idx = idx.wrapping_add(1);
+                thread::sleep(Duration::from_millis(80));
+            }
+        }));
+
         out.flush()
+    }
+
+    /// Returns a handle that can stop the animation from another context.
+    pub fn stop_handle(&self) -> Option<Arc<AtomicBool>> {
+        self.stop_flag.clone()
+    }
+
+    fn stop_animation(&mut self) {
+        if let Some(flag) = self.stop_flag.take() {
+            flag.store(true, Ordering::Relaxed);
+        }
+        if let Some(handle) = self.anim_handle.take() {
+            let _ = handle.join();
+        }
+        // Clear the spinner line
+        let mut stdout = io::stdout();
+        let _ = execute!(
+            stdout,
+            MoveToColumn(0),
+            Clear(ClearType::CurrentLine)
+        );
     }
 
     pub fn finish(
         &mut self,
         label: &str,
-        theme: &ColorTheme,
+        _theme: &ColorTheme,
         out: &mut impl Write,
     ) -> io::Result<()> {
+        self.stop_animation();
         self.frame_index = 0;
         execute!(
             out,
             MoveToColumn(0),
             Clear(ClearType::CurrentLine),
-            SetForegroundColor(theme.spinner_done),
+            SetForegroundColor(Color::AnsiValue(208)),
             Print(format!("✔ {label}\n")),
             ResetColor
         )?;
@@ -99,15 +180,16 @@ impl Spinner {
     pub fn fail(
         &mut self,
         label: &str,
-        theme: &ColorTheme,
+        _theme: &ColorTheme,
         out: &mut impl Write,
     ) -> io::Result<()> {
+        self.stop_animation();
         self.frame_index = 0;
         execute!(
             out,
             MoveToColumn(0),
             Clear(ClearType::CurrentLine),
-            SetForegroundColor(theme.spinner_failed),
+            SetForegroundColor(Color::Red),
             Print(format!("✘ {label}\n")),
             ResetColor
         )?;

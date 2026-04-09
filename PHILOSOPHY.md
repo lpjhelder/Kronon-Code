@@ -1,4 +1,4 @@
-# Claw Code Philosophy
+# Kronon Code Philosophy
 
 ## Stop Staring at the Files
 
@@ -6,7 +6,7 @@ If you only look at the generated files in this repository, you are looking at t
 
 The Python rewrite was a byproduct. The Rust rewrite was also a byproduct. The real thing worth studying is the **system that produced them**: a clawhip-based coordination loop where humans give direction and autonomous claws execute the work.
 
-Claw Code is not just a codebase. It is a public demonstration of what happens when:
+Kronon Code is not just a codebase. It is a public demonstration of what happens when:
 
 - a human provides clear direction,
 - multiple coding agents coordinate in parallel,
@@ -70,9 +70,9 @@ When agent systems can rebuild a codebase in hours, the scarce resource becomes:
 
 A fast agent team does not remove the need for thinking. It makes clear thinking even more valuable.
 
-## What Claw Code Demonstrates
+## What Kronon Code Demonstrates
 
-Claw Code demonstrates that a repository can be:
+Kronon Code demonstrates that a repository can be:
 
 - **autonomously built in public**
 - coordinated by claws/lobsters rather than human pair-programming alone
@@ -100,7 +100,7 @@ The job of the human is to decide what deserves to exist.
 
 ## Short Version
 
-**Claw Code is a demo of autonomous software development.**
+**Kronon Code is a demo of autonomous software development.**
 
 Humans provide direction.
 Claws coordinate, build, test, recover, and push.

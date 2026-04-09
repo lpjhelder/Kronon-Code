@@ -1,97 +1,91 @@
-# Claw Code
+# Kronon Code
 
 <p align="center">
-  <a href="https://github.com/ultraworkers/claw-code">ultraworkers/claw-code</a>
+  <a href="https://github.com/lpjhelder/Kronon-Code">lpjhelder/Kronon-Code</a>
   ·
   <a href="./USAGE.md">Usage</a>
   ·
   <a href="./rust/README.md">Rust workspace</a>
   ·
-  <a href="./PARITY.md">Parity</a>
-  ·
-  <a href="./ROADMAP.md">Roadmap</a>
-  ·
-  <a href="https://discord.gg/5TUQKqFWd">UltraWorkers Discord</a>
+  <a href="./CHANGELOG.md">Changelog</a>
 </p>
 
-<p align="center">
-  <a href="https://star-history.com/#ultraworkers/claw-code&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ultraworkers/claw-code&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ultraworkers/claw-code&type=Date" />
-      <img alt="Star history for ultraworkers/claw-code" src="https://api.star-history.com/svg?repos=ultraworkers/claw-code&type=Date" width="600" />
-    </picture>
-  </a>
-</p>
+Fork do [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code) com foco em **suporte a Windows** e **modelos locais via Ollama**.
 
-<p align="center">
-  <img src="assets/claw-hero.jpeg" alt="Claw Code" width="300" />
-</p>
+## O que muda em relacao ao Claw Code
 
-Claw Code is the public Rust implementation of the `claw` CLI agent harness.
-The canonical implementation lives in [`rust/`](./rust), and the current source of truth for this repository is **ultraworkers/claw-code**.
-
-> [!IMPORTANT]
-> Start with [`USAGE.md`](./USAGE.md) for build, auth, CLI, session, and parity-harness workflows. Make `claw doctor` your first health check after building, use [`rust/README.md`](./rust/README.md) for crate-level details, read [`PARITY.md`](./PARITY.md) for the current Rust-port checkpoint, and see [`docs/container.md`](./docs/container.md) for the container-first workflow.
-
-## Current repository shape
-
-- **`rust/`** — canonical Rust workspace and the `claw` CLI binary
-- **`USAGE.md`** — task-oriented usage guide for the current product surface
-- **`PARITY.md`** — Rust-port parity status and migration notes
-- **`ROADMAP.md`** — active roadmap and cleanup backlog
-- **`PHILOSOPHY.md`** — project intent and system-design framing
-- **`src/` + `tests/`** — companion Python/reference workspace and audit helpers; not the primary runtime surface
+- **Suporte a Windows** — bash tool usa `cmd.exe /C` no Windows em vez de `sh -lc`
+- **Ollama como backend** — configurado pra usar modelos locais via API OpenAI-compatible
+- **Testado com Gemma 4** — validado com gemma4:26b e gemma4:31b em RTX PRO 5000 Blackwell (48GB VRAM)
 
 ## Quick start
 
-> [!NOTE]
-> **`cargo install clawcode` will not work** — this package is not published on crates.io. Build from source as shown below.
+### Pre-requisitos
+
+- [Rust toolchain](https://rustup.rs/) (cargo)
+- [Ollama](https://ollama.com/) rodando com um modelo (ex: `gemma4:31b`)
+
+### Build
 
 ```bash
-git clone https://github.com/ultraworkers/claw-code
-cd claw-code/rust
+git clone https://github.com/lpjhelder/Kronon-Code.git
+cd Kronon-Code/rust
 cargo build --workspace
-./target/debug/claw --help
-./target/debug/claw prompt "summarize this repository"
 ```
 
-Authenticate with either an API key or the built-in OAuth flow:
+### Configurar (uma vez)
+
+Windows (CMD):
+```cmd
+setx OPENAI_BASE_URL "http://192.168.0.10:11434/v1"
+setx OPENAI_API_KEY "dummy"
+```
+
+Linux/Mac:
+```bash
+export OPENAI_BASE_URL="http://localhost:11434/v1"
+export OPENAI_API_KEY="dummy"
+```
+
+> Ajuste o IP/porta pro seu servidor Ollama. O `OPENAI_API_KEY` pode ser qualquer valor — Ollama nao exige autenticacao.
+
+### Usar
 
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-# or
-cd rust
-./target/debug/claw login
+# REPL interativo
+./rust/target/debug/claw --model gemma4:31b
+
+# Prompt unico
+./rust/target/debug/claw --model gemma4:31b prompt "explica o que esse projeto faz"
 ```
 
-Run the workspace test suite:
+## Modelos testados
+
+| Modelo | VRAM | tok/s | Tool calling | Status |
+|--------|:----:|:-----:|:------------:|:------:|
+| gemma4:31b (denso, Q4) | 47.3 GB | 48 tok/s | Funciona | GPU 100% (sem TTS) |
+| gemma4:26b (MoE, Q4) | 25.9 GB | 135 tok/s | A testar | GPU 100% |
+
+> Testado em NVIDIA RTX PRO 5000 Blackwell 48GB via Ollama 0.20.4
+
+## Estrutura do projeto
+
+- **`rust/`** — workspace Rust com o binario `claw`
+- **`USAGE.md`** — guia de uso (comandos, auth, sessoes)
+- **`PARITY.md`** — status de paridade com o projeto original
+- **`ROADMAP.md`** — roadmap e backlog
+
+## Upstream
+
+Fork de [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code). Para sincronizar:
 
 ```bash
-cd rust
-cargo test --workspace
+git fetch upstream
+git merge upstream/main
 ```
 
-## Documentation map
+## Disclaimer
 
-- [`USAGE.md`](./USAGE.md) — quick commands, auth, sessions, config, parity harness
-- [`rust/README.md`](./rust/README.md) — crate map, CLI surface, features, workspace layout
-- [`PARITY.md`](./PARITY.md) — parity status for the Rust port
-- [`rust/MOCK_PARITY_HARNESS.md`](./rust/MOCK_PARITY_HARNESS.md) — deterministic mock-service harness details
-- [`ROADMAP.md`](./ROADMAP.md) — active roadmap and open cleanup work
-- [`PHILOSOPHY.md`](./PHILOSOPHY.md) — why the project exists and how it is operated
-
-## Ecosystem
-
-Claw Code is built in the open alongside the broader UltraWorkers toolchain:
-
-- [clawhip](https://github.com/Yeachan-Heo/clawhip)
-- [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)
-- [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode)
-- [oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex)
-- [UltraWorkers Discord](https://discord.gg/5TUQKqFWd)
-
-## Ownership / affiliation disclaimer
-
-- This repository does **not** claim ownership of the original Claude Code source material.
-- This repository is **not affiliated with, endorsed by, or maintained by Anthropic**.
+- Este repositorio **nao** reivindica propriedade do codigo fonte original do Claude Code.
+- Este repositorio **nao e afiliado, endossado ou mantido pela Anthropic**.
+- Fork mantido por [@lpjhelder](https://github.com/lpjhelder).
