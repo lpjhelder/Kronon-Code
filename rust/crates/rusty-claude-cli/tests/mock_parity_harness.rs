@@ -314,7 +314,7 @@ fn run_case(case: ScenarioCase, workspace: &HarnessWorkspace, base_url: &str) ->
         .env_clear()
         .env("ANTHROPIC_API_KEY", "test-parity-key")
         .env("ANTHROPIC_BASE_URL", base_url)
-        .env("CLAW_CONFIG_HOME", &workspace.config_home)
+        .env("KRONON_CONFIG_HOME", &workspace.config_home)
         .env("HOME", &workspace.home)
         .env("NO_COLOR", "1")
         .env("PATH", "/usr/bin:/bin")
@@ -345,16 +345,16 @@ fn run_case(case: ScenarioCase, workspace: &HarnessWorkspace, base_url: &str) ->
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .expect("claw should launch");
+            .expect("kronon should launch");
         child
             .stdin
             .as_mut()
             .expect("stdin should be piped")
             .write_all(stdin.as_bytes())
             .expect("stdin should write");
-        child.wait_with_output().expect("claw should finish")
+        child.wait_with_output().expect("kronon should finish")
     } else {
-        command.output().expect("claw should launch")
+        command.output().expect("kronon should launch")
     };
 
     assert_success(&output);
@@ -367,7 +367,7 @@ fn run_case(case: ScenarioCase, workspace: &HarnessWorkspace, base_url: &str) ->
 
 #[allow(dead_code)]
 fn prepare_auto_compact_fixture(workspace: &HarnessWorkspace) {
-    let sessions_dir = workspace.root.join(".claw").join("sessions");
+    let sessions_dir = workspace.root.join(".kronon").join("sessions");
     fs::create_dir_all(&sessions_dir).expect("sessions dir should exist");
 
     // Write a pre-seeded session with 6 messages so auto-compact can remove them
@@ -877,7 +877,7 @@ fn unique_temp_dir(label: &str) -> PathBuf {
         .as_millis();
     let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "claw-mock-parity-{label}-{}-{millis}-{counter}",
+        "kronon-mock-parity-{label}-{}-{millis}-{counter}",
         std::process::id()
     ))
 }

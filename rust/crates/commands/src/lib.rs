@@ -230,7 +230,7 @@ const SLASH_COMMAND_SPECS: &[SlashCommandSpec] = &[
     SlashCommandSpec {
         name: "plugin",
         aliases: &["plugins", "marketplace"],
-        summary: "Manage Claw Code plugins",
+        summary: "Manage Kronon Code plugins",
         argument_hint: Some(
             "[list|install <path>|enable <name>|disable <name>|uninstall <id>|update <id>]",
         ),
@@ -2590,7 +2590,7 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
         push_unique_root(
             &mut roots,
             DefinitionSource::ProjectClaw,
-            ancestor.join(".claw").join(leaf),
+            ancestor.join(".kronon").join(leaf),
         );
         push_unique_root(
             &mut roots,
@@ -2604,7 +2604,7 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
         );
     }
 
-    if let Ok(claw_config_home) = env::var("CLAW_CONFIG_HOME") {
+    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
         push_unique_root(
             &mut roots,
             DefinitionSource::UserClawConfigHome,
@@ -2633,7 +2633,7 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
         push_unique_root(
             &mut roots,
             DefinitionSource::UserClaw,
-            home.join(".claw").join(leaf),
+            home.join(".kronon").join(leaf),
         );
         push_unique_root(
             &mut roots,
@@ -2658,7 +2658,7 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         push_unique_skill_root(
             &mut roots,
             DefinitionSource::ProjectClaw,
-            ancestor.join(".claw").join("skills"),
+            ancestor.join(".kronon").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
@@ -2688,7 +2688,7 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         push_unique_skill_root(
             &mut roots,
             DefinitionSource::ProjectClaw,
-            ancestor.join(".claw").join("commands"),
+            ancestor.join(".kronon").join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
         push_unique_skill_root(
@@ -2705,7 +2705,7 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         );
     }
 
-    if let Ok(claw_config_home) = env::var("CLAW_CONFIG_HOME") {
+    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
         let claw_config_home = PathBuf::from(claw_config_home);
         push_unique_skill_root(
             &mut roots,
@@ -2742,7 +2742,7 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         push_unique_skill_root(
             &mut roots,
             DefinitionSource::UserClaw,
-            home.join(".claw").join("skills"),
+            home.join(".kronon").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
@@ -2754,7 +2754,7 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         push_unique_skill_root(
             &mut roots,
             DefinitionSource::UserClaw,
-            home.join(".claw").join("commands"),
+            home.join(".kronon").join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
         push_unique_skill_root(
@@ -2866,18 +2866,18 @@ fn install_skill_into(
 }
 
 fn default_skill_install_root() -> std::io::Result<PathBuf> {
-    if let Ok(claw_config_home) = env::var("CLAW_CONFIG_HOME") {
+    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
         return Ok(PathBuf::from(claw_config_home).join("skills"));
     }
     if let Ok(codex_home) = env::var("CODEX_HOME") {
         return Ok(PathBuf::from(codex_home).join("skills"));
     }
     if let Some(home) = env::var_os("HOME") {
-        return Ok(PathBuf::from(home).join(".claw").join("skills"));
+        return Ok(PathBuf::from(home).join(".kronon").join("skills"));
     }
     Err(std::io::Error::new(
         std::io::ErrorKind::NotFound,
-        "unable to resolve a skills install root; set CLAW_CONFIG_HOME or HOME",
+        "unable to resolve a skills install root; set KRONON_CONFIG_HOME or HOME",
     ))
 }
 
@@ -3568,8 +3568,8 @@ fn render_agents_usage(unexpected: Option<&str>) -> String {
     let mut lines = vec![
         "Agents".to_string(),
         "  Usage            /agents [list|help]".to_string(),
-        "  Direct CLI       claw agents".to_string(),
-        "  Sources          .claw/agents, ~/.claw/agents, $CLAW_CONFIG_HOME/agents".to_string(),
+        "  Direct CLI       kronon agents".to_string(),
+        "  Sources          .kronon/agents, ~/.kronon/agents, $KRONON_CONFIG_HOME/agents".to_string(),
     ];
     if let Some(args) = unexpected {
         lines.push(format!("  Unexpected       {args}"));
@@ -3583,8 +3583,8 @@ fn render_agents_usage_json(unexpected: Option<&str>) -> Value {
         "action": "help",
         "usage": {
             "slash_command": "/agents [list|help]",
-            "direct_cli": "claw agents [list|help]",
-            "sources": [".claw/agents", "~/.claw/agents", "$CLAW_CONFIG_HOME/agents"],
+            "direct_cli": "kronon agents [list|help]",
+            "sources": [".kronon/agents", "~/.kronon/agents", "$KRONON_CONFIG_HOME/agents"],
         },
         "unexpected": unexpected,
     })
@@ -3595,10 +3595,10 @@ fn render_skills_usage(unexpected: Option<&str>) -> String {
         "Skills".to_string(),
         "  Usage            /skills [list|install <path>|help|<skill> [args]]".to_string(),
         "  Alias            /skill".to_string(),
-        "  Direct CLI       claw skills [list|install <path>|help|<skill> [args]]".to_string(),
+        "  Direct CLI       kronon skills [list|install <path>|help|<skill> [args]]".to_string(),
         "  Invoke           /skills help overview -> $help overview".to_string(),
-        "  Install root     $CLAW_CONFIG_HOME/skills or ~/.claw/skills".to_string(),
-        "  Sources          .claw/skills, .omc/skills, .agents/skills, .codex/skills, .claude/skills, ~/.claw/skills, ~/.omc/skills, ~/.claude/skills/omc-learned, ~/.codex/skills, ~/.claude/skills, legacy /commands".to_string(),
+        "  Install root     $KRONON_CONFIG_HOME/skills or ~/.kronon/skills".to_string(),
+        "  Sources          .kronon/skills, .omc/skills, .agents/skills, .codex/skills, .claude/skills, ~/.kronon/skills, ~/.omc/skills, ~/.claude/skills/omc-learned, ~/.codex/skills, ~/.claude/skills, legacy /commands".to_string(),
     ];
     if let Some(args) = unexpected {
         lines.push(format!("  Unexpected       {args}"));
@@ -3613,16 +3613,16 @@ fn render_skills_usage_json(unexpected: Option<&str>) -> Value {
         "usage": {
             "slash_command": "/skills [list|install <path>|help|<skill> [args]]",
             "aliases": ["/skill"],
-            "direct_cli": "claw skills [list|install <path>|help|<skill> [args]]",
+            "direct_cli": "kronon skills [list|install <path>|help|<skill> [args]]",
             "invoke": "/skills help overview -> $help overview",
-            "install_root": "$CLAW_CONFIG_HOME/skills or ~/.claw/skills",
+            "install_root": "$KRONON_CONFIG_HOME/skills or ~/.kronon/skills",
             "sources": [
-                ".claw/skills",
+                ".kronon/skills",
                 ".omc/skills",
                 ".agents/skills",
                 ".codex/skills",
                 ".claude/skills",
-                "~/.claw/skills",
+                "~/.kronon/skills",
                 "~/.omc/skills",
                 "~/.claude/skills/omc-learned",
                 "~/.codex/skills",
@@ -3639,8 +3639,8 @@ fn render_mcp_usage(unexpected: Option<&str>) -> String {
     let mut lines = vec![
         "MCP".to_string(),
         "  Usage            /mcp [list|show <server>|help]".to_string(),
-        "  Direct CLI       claw mcp [list|show <server>|help]".to_string(),
-        "  Sources          .claw/settings.json, .claw/settings.local.json".to_string(),
+        "  Direct CLI       kronon mcp [list|show <server>|help]".to_string(),
+        "  Sources          .kronon/settings.json, .kronon/settings.local.json".to_string(),
     ];
     if let Some(args) = unexpected {
         lines.push(format!("  Unexpected       {args}"));
@@ -3654,8 +3654,8 @@ fn render_mcp_usage_json(unexpected: Option<&str>) -> Value {
         "action": "help",
         "usage": {
             "slash_command": "/mcp [list|show <server>|help]",
-            "direct_cli": "claw mcp [list|show <server>|help]",
-            "sources": [".claw/settings.json", ".claw/settings.local.json"],
+            "direct_cli": "kronon mcp [list|show <server>|help]",
+            "sources": [".kronon/settings.json", ".kronon/settings.local.json"],
         },
         "unexpected": unexpected,
     })
@@ -4539,7 +4539,7 @@ mod tests {
 
         // then
         assert!(help.contains("/plugin"));
-        assert!(help.contains("Summary          Manage Claw Code plugins"));
+        assert!(help.contains("Summary          Manage Kronon Code plugins"));
         assert!(help.contains("Aliases          /plugins, /marketplace"));
         assert!(help.contains("Category         Tools"));
     }
@@ -4832,7 +4832,7 @@ mod tests {
         let help = handle_agents_slash_command_json(Some("help"), &workspace).expect("agents help");
         assert_eq!(help["kind"], "agents");
         assert_eq!(help["action"], "help");
-        assert_eq!(help["usage"]["direct_cli"], "claw agents [list|help]");
+        assert_eq!(help["usage"]["direct_cli"], "kronon agents [list|help]");
 
         let unexpected = handle_agents_slash_command_json(Some("show planner"), &workspace)
             .expect("agents usage");
@@ -4892,8 +4892,8 @@ mod tests {
     #[test]
     fn resolves_project_skills_and_legacy_commands_from_shared_registry() {
         let workspace = temp_dir("resolve-project-skills");
-        let project_skills = workspace.join(".claw").join("skills");
-        let legacy_commands = workspace.join(".claw").join("commands");
+        let project_skills = workspace.join(".kronon").join("skills");
+        let legacy_commands = workspace.join(".kronon").join("commands");
 
         write_skill(&project_skills, "plan", "Project planning guidance");
         write_legacy_command(&legacy_commands, "handoff", "Legacy handoff guidance");
@@ -4957,7 +4957,7 @@ mod tests {
         assert_eq!(help["usage"]["aliases"][0], "/skill");
         assert_eq!(
             help["usage"]["direct_cli"],
-            "claw skills [list|install <path>|help|<skill> [args]]"
+            "kronon skills [list|install <path>|help|<skill> [args]]"
         );
 
         let _ = fs::remove_dir_all(workspace);
@@ -4971,9 +4971,9 @@ mod tests {
         let agents_help =
             super::handle_agents_slash_command(Some("help"), &cwd).expect("agents help");
         assert!(agents_help.contains("Usage            /agents [list|help]"));
-        assert!(agents_help.contains("Direct CLI       claw agents"));
+        assert!(agents_help.contains("Direct CLI       kronon agents"));
         assert!(agents_help
-            .contains("Sources          .claw/agents, ~/.claw/agents, $CLAW_CONFIG_HOME/agents"));
+            .contains("Sources          .kronon/agents, ~/.kronon/agents, $KRONON_CONFIG_HOME/agents"));
 
         let agents_unexpected =
             super::handle_agents_slash_command(Some("show planner"), &cwd).expect("agents usage");
@@ -4985,7 +4985,7 @@ mod tests {
             .contains("Usage            /skills [list|install <path>|help|<skill> [args]]"));
         assert!(skills_help.contains("Alias            /skill"));
         assert!(skills_help.contains("Invoke           /skills help overview -> $help overview"));
-        assert!(skills_help.contains("Install root     $CLAW_CONFIG_HOME/skills or ~/.claw/skills"));
+        assert!(skills_help.contains("Install root     $KRONON_CONFIG_HOME/skills or ~/.kronon/skills"));
         assert!(skills_help.contains(".omc/skills"));
         assert!(skills_help.contains(".agents/skills"));
         assert!(skills_help.contains("~/.claude/skills/omc-learned"));
@@ -5095,7 +5095,7 @@ mod tests {
 
         let help = super::handle_mcp_slash_command(Some("help"), &cwd).expect("mcp help");
         assert!(help.contains("Usage            /mcp [list|show <server>|help]"));
-        assert!(help.contains("Direct CLI       claw mcp [list|show <server>|help]"));
+        assert!(help.contains("Direct CLI       kronon mcp [list|show <server>|help]"));
 
         let unexpected =
             super::handle_mcp_slash_command(Some("show alpha beta"), &cwd).expect("mcp usage");
@@ -5118,10 +5118,10 @@ mod tests {
     fn renders_mcp_reports_from_loaded_config() {
         let workspace = temp_dir("mcp-config-workspace");
         let config_home = temp_dir("mcp-config-home");
-        fs::create_dir_all(workspace.join(".claw")).expect("workspace config dir");
+        fs::create_dir_all(workspace.join(".kronon")).expect("workspace config dir");
         fs::create_dir_all(&config_home).expect("config home");
         fs::write(
-            workspace.join(".claw").join("settings.json"),
+            workspace.join(".kronon").join("settings.json"),
             r#"{
               "mcpServers": {
                 "alpha": {
@@ -5145,7 +5145,7 @@ mod tests {
         )
         .expect("write settings");
         fs::write(
-            workspace.join(".claw").join("settings.local.json"),
+            workspace.join(".kronon").join("settings.local.json"),
             r#"{
               "mcpServers": {
                 "remote": {
@@ -5195,10 +5195,10 @@ mod tests {
     fn renders_mcp_reports_as_json() {
         let workspace = temp_dir("mcp-json-workspace");
         let config_home = temp_dir("mcp-json-home");
-        fs::create_dir_all(workspace.join(".claw")).expect("workspace config dir");
+        fs::create_dir_all(workspace.join(".kronon")).expect("workspace config dir");
         fs::create_dir_all(&config_home).expect("config home");
         fs::write(
-            workspace.join(".claw").join("settings.json"),
+            workspace.join(".kronon").join("settings.json"),
             r#"{
               "mcpServers": {
                 "alpha": {
@@ -5222,7 +5222,7 @@ mod tests {
         )
         .expect("write settings");
         fs::write(
-            workspace.join(".claw").join("settings.local.json"),
+            workspace.join(".kronon").join("settings.local.json"),
             r#"{
               "mcpServers": {
                 "remote": {
@@ -5267,7 +5267,7 @@ mod tests {
         let help =
             render_mcp_report_json_for(&loader, &workspace, Some("help")).expect("mcp help json");
         assert_eq!(help["action"], "help");
-        assert_eq!(help["usage"]["sources"][0], ".claw/settings.json");
+        assert_eq!(help["usage"]["sources"][0], ".kronon/settings.json");
 
         let _ = fs::remove_dir_all(workspace);
         let _ = fs::remove_dir_all(config_home);

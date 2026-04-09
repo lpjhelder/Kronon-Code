@@ -25,7 +25,7 @@ fn status_command_applies_model_and_permission_mode_flags() {
             "status",
         ])
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
 
     // then
     assert_success(&output);
@@ -53,7 +53,7 @@ fn resume_flag_loads_a_saved_session_and_dispatches_status() {
             "/status",
         ])
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
 
     // then
     assert_success(&output);
@@ -77,12 +77,12 @@ fn slash_command_names_match_known_commands_and_suggest_nearby_unknown_ones() {
         .current_dir(&temp_dir)
         .arg("/help")
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
     let unknown_output = Command::new(env!("CARGO_BIN_EXE_claw"))
         .current_dir(&temp_dir)
         .arg("/zstats")
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
 
     // then
     assert_success(&help_output);
@@ -113,7 +113,7 @@ fn omc_namespaced_slash_commands_surface_a_targeted_compatibility_hint() {
         .current_dir(&temp_dir)
         .arg("/oh-my-claudecode:hud")
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
 
     assert!(
         !output.status.success(),
@@ -133,16 +133,16 @@ fn omc_namespaced_slash_commands_surface_a_targeted_compatibility_hint() {
 fn config_command_loads_defaults_from_standard_config_locations() {
     // given
     let temp_dir = unique_temp_dir("config-defaults");
-    let config_home = temp_dir.join("home").join(".claw");
-    fs::create_dir_all(temp_dir.join(".claw")).expect("project config dir should exist");
+    let config_home = temp_dir.join("home").join(".kronon");
+    fs::create_dir_all(temp_dir.join(".kronon")).expect("project config dir should exist");
     fs::create_dir_all(&config_home).expect("home config dir should exist");
 
     fs::write(config_home.join("settings.json"), r#"{"model":"haiku"}"#)
         .expect("write user settings");
-    fs::write(temp_dir.join(".claw.json"), r#"{"model":"sonnet"}"#)
+    fs::write(temp_dir.join(".kronon.json"), r#"{"model":"sonnet"}"#)
         .expect("write project settings");
     fs::write(
-        temp_dir.join(".claw").join("settings.local.json"),
+        temp_dir.join(".kronon").join("settings.local.json"),
         r#"{"model":"opus"}"#,
     )
     .expect("write local settings");
@@ -150,7 +150,7 @@ fn config_command_loads_defaults_from_standard_config_locations() {
 
     // when
     let output = command_in(&temp_dir)
-        .env("CLAW_CONFIG_HOME", &config_home)
+        .env("KRONON_CONFIG_HOME", &config_home)
         .args([
             "--resume",
             session_path.to_str().expect("utf8 path"),
@@ -158,7 +158,7 @@ fn config_command_loads_defaults_from_standard_config_locations() {
             "model",
         ])
         .output()
-        .expect("claw should launch");
+        .expect("kronon should launch");
 
     // then
     assert_success(&output);
@@ -173,10 +173,10 @@ fn config_command_loads_defaults_from_standard_config_locations() {
             .to_str()
             .expect("utf8 path")
     ));
-    assert!(stdout.contains(temp_dir.join(".claw.json").to_str().expect("utf8 path")));
+    assert!(stdout.contains(temp_dir.join(".kronon.json").to_str().expect("utf8 path")));
     assert!(stdout.contains(
         temp_dir
-            .join(".claw")
+            .join(".kronon")
             .join("settings.local.json")
             .to_str()
             .expect("utf8 path")
@@ -189,18 +189,18 @@ fn config_command_loads_defaults_from_standard_config_locations() {
 fn doctor_command_runs_as_a_local_shell_entrypoint() {
     // given
     let temp_dir = unique_temp_dir("doctor-entrypoint");
-    let config_home = temp_dir.join("home").join(".claw");
+    let config_home = temp_dir.join("home").join(".kronon");
     fs::create_dir_all(&config_home).expect("config home should exist");
 
     // when
     let output = command_in(&temp_dir)
-        .env("CLAW_CONFIG_HOME", &config_home)
+        .env("KRONON_CONFIG_HOME", &config_home)
         .env_remove("ANTHROPIC_API_KEY")
         .env_remove("ANTHROPIC_AUTH_TOKEN")
         .env("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
         .arg("doctor")
         .output()
-        .expect("claw doctor should launch");
+        .expect("kronon doctor should launch");
 
     // then
     assert_success(&output);
@@ -218,11 +218,11 @@ fn doctor_command_runs_as_a_local_shell_entrypoint() {
 #[test]
 fn local_subcommand_help_does_not_fall_through_to_runtime_or_provider_calls() {
     let temp_dir = unique_temp_dir("subcommand-help");
-    let config_home = temp_dir.join("home").join(".claw");
+    let config_home = temp_dir.join("home").join(".kronon");
     fs::create_dir_all(&config_home).expect("config home should exist");
 
     let doctor_help = command_in(&temp_dir)
-        .env("CLAW_CONFIG_HOME", &config_home)
+        .env("KRONON_CONFIG_HOME", &config_home)
         .env_remove("ANTHROPIC_API_KEY")
         .env_remove("ANTHROPIC_AUTH_TOKEN")
         .env("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
@@ -230,7 +230,7 @@ fn local_subcommand_help_does_not_fall_through_to_runtime_or_provider_calls() {
         .output()
         .expect("doctor help should launch");
     let status_help = command_in(&temp_dir)
-        .env("CLAW_CONFIG_HOME", &config_home)
+        .env("KRONON_CONFIG_HOME", &config_home)
         .env_remove("ANTHROPIC_API_KEY")
         .env_remove("ANTHROPIC_AUTH_TOKEN")
         .env("ANTHROPIC_BASE_URL", "http://127.0.0.1:9")
@@ -240,13 +240,13 @@ fn local_subcommand_help_does_not_fall_through_to_runtime_or_provider_calls() {
 
     assert_success(&doctor_help);
     let doctor_stdout = String::from_utf8(doctor_help.stdout).expect("stdout should be utf8");
-    assert!(doctor_stdout.contains("Usage            claw doctor"));
+    assert!(doctor_stdout.contains("Usage            kronon doctor"));
     assert!(doctor_stdout.contains("local-only health report"));
     assert!(!doctor_stdout.contains("Thinking"));
 
     assert_success(&status_help);
     let status_stdout = String::from_utf8(status_help.stdout).expect("stdout should be utf8");
-    assert!(status_stdout.contains("Usage            claw status"));
+    assert!(status_stdout.contains("Usage            kronon status"));
     assert!(status_stdout.contains("local workspace snapshot"));
     assert!(!status_stdout.contains("Thinking"));
 
@@ -292,7 +292,7 @@ fn unique_temp_dir(label: &str) -> PathBuf {
         .as_millis();
     let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "claw-{label}-{}-{millis}-{counter}",
+        "kronon-{label}-{}-{millis}-{counter}",
         std::process::id()
     ))
 }

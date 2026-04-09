@@ -26,7 +26,7 @@ fn compact_flag_prints_only_final_assistant_text_without_tool_call_details() {
     fs::create_dir_all(&home).expect("home should exist");
     fs::write(workspace.join("fixture.txt"), "alpha parity line\n").expect("fixture should write");
 
-    // when we run claw in compact text mode against a tool-using scenario
+    // when we run kronon in compact text mode against a tool-using scenario
     let prompt = format!("{SCENARIO_PREFIX}read_file_roundtrip");
     let output = run_claw(
         &workspace,
@@ -92,7 +92,7 @@ fn compact_flag_streaming_text_only_emits_final_message_text() {
     fs::create_dir_all(&config_home).expect("config home should exist");
     fs::create_dir_all(&home).expect("home should exist");
 
-    // when we invoke claw with --compact for the streaming text scenario
+    // when we invoke kronon with --compact for the streaming text scenario
     let prompt = format!("{SCENARIO_PREFIX}streaming_text");
     let output = run_claw(
         &workspace,
@@ -138,12 +138,12 @@ fn run_claw(
         .env_clear()
         .env("ANTHROPIC_API_KEY", "test-compact-key")
         .env("ANTHROPIC_BASE_URL", base_url)
-        .env("CLAW_CONFIG_HOME", config_home)
+        .env("KRONON_CONFIG_HOME", config_home)
         .env("HOME", home)
         .env("NO_COLOR", "1")
         .env("PATH", "/usr/bin:/bin")
         .args(args);
-    command.output().expect("claw should launch")
+    command.output().expect("kronon should launch")
 }
 
 fn unique_temp_dir(label: &str) -> PathBuf {
@@ -153,7 +153,7 @@ fn unique_temp_dir(label: &str) -> PathBuf {
         .as_millis();
     let counter = TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
     std::env::temp_dir().join(format!(
-        "claw-compact-{label}-{}-{millis}-{counter}",
+        "kronon-compact-{label}-{}-{millis}-{counter}",
         std::process::id()
     ))
 }
