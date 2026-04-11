@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const STARTER_CLAW_JSON: &str = concat!(
+const STARTER_KRONON_JSON: &str = concat!(
     "{\n",
     "  \"permissions\": {\n",
     "    \"defaultMode\": \"dontAsk\"\n",
@@ -80,16 +80,16 @@ struct RepoDetection {
 pub(crate) fn initialize_repo(cwd: &Path) -> Result<InitReport, Box<dyn std::error::Error>> {
     let mut artifacts = Vec::new();
 
-    let claw_dir = cwd.join(".kronon");
+    let kronon_dir = cwd.join(".kronon");
     artifacts.push(InitArtifact {
         name: ".kronon/",
-        status: ensure_dir(&claw_dir)?,
+        status: ensure_dir(&kronon_dir)?,
     });
 
-    let claw_json = cwd.join(".kronon.json");
+    let kronon_json = cwd.join(".kronon.json");
     artifacts.push(InitArtifact {
         name: ".kronon.json",
-        status: write_file_if_missing(&claw_json, STARTER_CLAW_JSON)?,
+        status: write_file_if_missing(&kronon_json, STARTER_KRONON_JSON)?,
     });
 
     let gitignore = cwd.join(".gitignore");

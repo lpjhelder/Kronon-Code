@@ -308,7 +308,7 @@ struct ScenarioReport {
 }
 
 fn run_case(case: ScenarioCase, workspace: &HarnessWorkspace, base_url: &str) -> ScenarioRun {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_claw"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_kronon"));
     command
         .current_dir(&workspace.root)
         .env_clear()
@@ -423,7 +423,7 @@ fn prepare_plugin_fixture(workspace: &HarnessWorkspace) {
     let script_path = tool_dir.join("echo-json.sh");
     fs::write(
         &script_path,
-        "#!/bin/sh\nINPUT=$(cat)\nprintf '{\"plugin\":\"%s\",\"tool\":\"%s\",\"input\":%s}\\n' \"$CLAWD_PLUGIN_ID\" \"$CLAWD_TOOL_NAME\" \"$INPUT\"\n",
+        "#!/bin/sh\nINPUT=$(cat)\nprintf '{\"plugin\":\"%s\",\"tool\":\"%s\",\"input\":%s}\\n' \"$KRONON_PLUGIN_ID\" \"$KRONON_TOOL_NAME\" \"$INPUT\"\n",
     )
     .expect("plugin script should write");
     let mut permissions = fs::metadata(&script_path)

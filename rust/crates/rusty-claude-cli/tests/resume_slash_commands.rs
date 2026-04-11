@@ -29,7 +29,7 @@ fn resumed_binary_accepts_slash_commands_with_arguments() {
         .expect("session should persist");
 
     // when
-    let output = run_claw(
+    let output = run_kronon(
         &temp_dir,
         &[
             "--resume",
@@ -87,7 +87,7 @@ fn status_command_applies_cli_flags_end_to_end() {
     fs::create_dir_all(&temp_dir).expect("temp dir should exist");
 
     // when
-    let output = run_claw(
+    let output = run_kronon(
         &temp_dir,
         &[
             "--model",
@@ -136,7 +136,7 @@ fn resumed_config_command_loads_settings_files_end_to_end() {
     .expect("local config should write");
 
     // when
-    let output = run_claw_with_env(
+    let output = run_kronon_with_env(
         &project_dir,
         &[
             "--resume",
@@ -206,7 +206,7 @@ fn resume_latest_restores_the_most_recent_managed_session() {
         .expect("newer session should persist");
 
     // when
-    let output = run_claw(&project_dir, &["--resume", "latest", "/status"]);
+    let output = run_kronon(&project_dir, &["--resume", "latest", "/status"]);
 
     // then
     assert!(
@@ -238,7 +238,7 @@ fn resumed_status_command_emits_structured_json_when_requested() {
         .expect("session should persist");
 
     // when
-    let output = run_claw(
+    let output = run_kronon(
         &temp_dir,
         &[
             "--output-format",
@@ -287,7 +287,7 @@ fn resumed_sandbox_command_emits_structured_json_when_requested() {
         .expect("session should persist");
 
     // when
-    let output = run_claw(
+    let output = run_kronon(
         &temp_dir,
         &[
             "--output-format",
@@ -318,12 +318,12 @@ fn resumed_sandbox_command_emits_structured_json_when_requested() {
     assert!(parsed["markers"].is_array());
 }
 
-fn run_claw(current_dir: &Path, args: &[&str]) -> Output {
-    run_claw_with_env(current_dir, args, &[])
+fn run_kronon(current_dir: &Path, args: &[&str]) -> Output {
+    run_kronon_with_env(current_dir, args, &[])
 }
 
-fn run_claw_with_env(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_claw"));
+fn run_kronon_with_env(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_kronon"));
     command.current_dir(current_dir).args(args);
     for (key, value) in envs {
         command.env(key, value);

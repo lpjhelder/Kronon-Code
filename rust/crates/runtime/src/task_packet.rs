@@ -97,7 +97,7 @@ mod tests {
         TaskPacket {
             objective: "Implement typed task packet format".to_string(),
             scope: "runtime/task system".to_string(),
-            repo: "claw-code-parity".to_string(),
+            repo: "kronon-code-parity".to_string(),
             branch_policy: "origin/main only".to_string(),
             acceptance_tests: vec![
                 "cargo build --workspace".to_string(),

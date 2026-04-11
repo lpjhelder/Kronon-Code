@@ -10,9 +10,9 @@
   <a href="./CHANGELOG.md">Changelog</a>
 </p>
 
-Fork do [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code) com foco em **suporte a Windows** e **modelos locais via Ollama**.
+Originado do projeto claw-code, agora independente como Kronon Code. Foco em **suporte a Windows** e **modelos locais via Ollama**.
 
-## O que muda em relacao ao Claw Code
+## O que muda
 
 - **Suporte a Windows** — bash tool usa `cmd.exe /C` no Windows em vez de `sh -lc`
 - **Ollama como backend** — configurado pra usar modelos locais via API OpenAI-compatible
@@ -53,10 +53,10 @@ export OPENAI_API_KEY="dummy"
 
 ```bash
 # REPL interativo
-./rust/target/debug/claw --model gemma4:31b
+./rust/target/debug/kronon --model gemma4:31b
 
 # Prompt unico
-./rust/target/debug/claw --model gemma4:31b prompt "explica o que esse projeto faz"
+./rust/target/debug/kronon --model gemma4:31b prompt "explica o que esse projeto faz"
 ```
 
 ## Modelos testados
@@ -70,19 +70,14 @@ export OPENAI_API_KEY="dummy"
 
 ## Estrutura do projeto
 
-- **`rust/`** — workspace Rust com o binario `claw`
+- **`rust/`** — workspace Rust com o binario `kronon`
 - **`USAGE.md`** — guia de uso (comandos, auth, sessoes)
 - **`PARITY.md`** — status de paridade com o projeto original
 - **`ROADMAP.md`** — roadmap e backlog
 
-## Upstream
+## Origem
 
-Fork de [ultraworkers/claw-code](https://github.com/ultraworkers/claw-code). Para sincronizar:
-
-```bash
-git fetch upstream
-git merge upstream/main
-```
+Este projeto foi originalmente baseado no claw-code (ultraworkers/claw-code) mas agora e desenvolvido de forma independente como Kronon Code. Nao ha mais sincronizacao ativa com o upstream.
 
 ## Disclaimer
 

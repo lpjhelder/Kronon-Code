@@ -253,7 +253,7 @@ mod tests {
         let packet = TaskPacket {
             objective: "Ship task packet support".to_string(),
             scope: "runtime/task system".to_string(),
-            repo: "claw-code-parity".to_string(),
+            repo: "kronon-code-parity".to_string(),
             branch_policy: "origin/main only".to_string(),
             acceptance_tests: vec!["cargo test --workspace".to_string()],
             commit_policy: "single commit".to_string(),

@@ -1,2 +1,2 @@
 @echo off
-E:\claude\kronon-code\rust\target\debug\claw.exe --model gemma4:31b %*
+E:\claude\kronon-code\rust\target\debug\kronon.exe --model gemma4:31b %*

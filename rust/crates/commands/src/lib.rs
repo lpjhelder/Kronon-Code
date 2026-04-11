@@ -1990,13 +1990,11 @@ pub struct PluginsCommandResult {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum DefinitionSource {
-    ProjectClaw,
-    ProjectCodex,
+    ProjectKronon,
     ProjectClaude,
-    UserClawConfigHome,
-    UserCodexHome,
-    UserClaw,
-    UserCodex,
+    UserKrononConfigHome,
+    UserKrononHome,
+    UserKronon,
     UserClaude,
 }
 
@@ -2020,11 +2018,11 @@ impl DefinitionScope {
 impl DefinitionSource {
     fn report_scope(self) -> DefinitionScope {
         match self {
-            Self::ProjectClaw | Self::ProjectCodex | Self::ProjectClaude => {
+            Self::ProjectKronon | Self::ProjectClaude => {
                 DefinitionScope::Project
             }
-            Self::UserClawConfigHome | Self::UserCodexHome => DefinitionScope::UserConfigHome,
-            Self::UserClaw | Self::UserCodex | Self::UserClaude => DefinitionScope::UserHome,
+            Self::UserKrononConfigHome | Self::UserKrononHome => DefinitionScope::UserConfigHome,
+            Self::UserKronon | Self::UserClaude => DefinitionScope::UserHome,
         }
     }
 
@@ -2589,13 +2587,8 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
     for ancestor in cwd.ancestors() {
         push_unique_root(
             &mut roots,
-            DefinitionSource::ProjectClaw,
+            DefinitionSource::ProjectKronon,
             ancestor.join(".kronon").join(leaf),
-        );
-        push_unique_root(
-            &mut roots,
-            DefinitionSource::ProjectCodex,
-            ancestor.join(".codex").join(leaf),
         );
         push_unique_root(
             &mut roots,
@@ -2604,19 +2597,19 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
         );
     }
 
-    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
+    if let Ok(kronon_config_home) = env::var("KRONON_CONFIG_HOME") {
         push_unique_root(
             &mut roots,
-            DefinitionSource::UserClawConfigHome,
-            PathBuf::from(claw_config_home).join(leaf),
+            DefinitionSource::UserKrononConfigHome,
+            PathBuf::from(kronon_config_home).join(leaf),
         );
     }
 
-    if let Ok(codex_home) = env::var("CODEX_HOME") {
+    if let Ok(kronon_home) = env::var("KRONON_HOME") {
         push_unique_root(
             &mut roots,
-            DefinitionSource::UserCodexHome,
-            PathBuf::from(codex_home).join(leaf),
+            DefinitionSource::UserKrononHome,
+            PathBuf::from(kronon_home).join(leaf),
         );
     }
 
@@ -2632,13 +2625,8 @@ fn discover_definition_roots(cwd: &Path, leaf: &str) -> Vec<(DefinitionSource, P
         let home = PathBuf::from(home);
         push_unique_root(
             &mut roots,
-            DefinitionSource::UserClaw,
+            DefinitionSource::UserKronon,
             home.join(".kronon").join(leaf),
-        );
-        push_unique_root(
-            &mut roots,
-            DefinitionSource::UserCodex,
-            home.join(".codex").join(leaf),
         );
         push_unique_root(
             &mut roots,
@@ -2657,26 +2645,20 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
     for ancestor in cwd.ancestors() {
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::ProjectClaw,
+            DefinitionSource::ProjectKronon,
             ancestor.join(".kronon").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::ProjectClaw,
+            DefinitionSource::ProjectKronon,
             ancestor.join(".omc").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::ProjectClaw,
+            DefinitionSource::ProjectKronon,
             ancestor.join(".agents").join("skills"),
-            SkillOrigin::SkillsDir,
-        );
-        push_unique_skill_root(
-            &mut roots,
-            DefinitionSource::ProjectCodex,
-            ancestor.join(".codex").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
@@ -2687,14 +2669,8 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::ProjectClaw,
+            DefinitionSource::ProjectKronon,
             ancestor.join(".kronon").join("commands"),
-            SkillOrigin::LegacyCommandsDir,
-        );
-        push_unique_skill_root(
-            &mut roots,
-            DefinitionSource::ProjectCodex,
-            ancestor.join(".codex").join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
         push_unique_skill_root(
@@ -2705,34 +2681,34 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         );
     }
 
-    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
-        let claw_config_home = PathBuf::from(claw_config_home);
+    if let Ok(kronon_config_home) = env::var("KRONON_CONFIG_HOME") {
+        let kronon_config_home = PathBuf::from(kronon_config_home);
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserClawConfigHome,
-            claw_config_home.join("skills"),
+            DefinitionSource::UserKrononConfigHome,
+            kronon_config_home.join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserClawConfigHome,
-            claw_config_home.join("commands"),
+            DefinitionSource::UserKrononConfigHome,
+            kronon_config_home.join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
     }
 
-    if let Ok(codex_home) = env::var("CODEX_HOME") {
-        let codex_home = PathBuf::from(codex_home);
+    if let Ok(kronon_home) = env::var("KRONON_HOME") {
+        let kronon_home = PathBuf::from(kronon_home);
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserCodexHome,
-            codex_home.join("skills"),
+            DefinitionSource::UserKrononHome,
+            kronon_home.join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserCodexHome,
-            codex_home.join("commands"),
+            DefinitionSource::UserKrononHome,
+            kronon_home.join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
     }
@@ -2741,32 +2717,20 @@ fn discover_skill_roots(cwd: &Path) -> Vec<SkillRoot> {
         let home = PathBuf::from(home);
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserClaw,
+            DefinitionSource::UserKronon,
             home.join(".kronon").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserClaw,
+            DefinitionSource::UserKronon,
             home.join(".omc").join("skills"),
             SkillOrigin::SkillsDir,
         );
         push_unique_skill_root(
             &mut roots,
-            DefinitionSource::UserClaw,
+            DefinitionSource::UserKronon,
             home.join(".kronon").join("commands"),
-            SkillOrigin::LegacyCommandsDir,
-        );
-        push_unique_skill_root(
-            &mut roots,
-            DefinitionSource::UserCodex,
-            home.join(".codex").join("skills"),
-            SkillOrigin::SkillsDir,
-        );
-        push_unique_skill_root(
-            &mut roots,
-            DefinitionSource::UserCodex,
-            home.join(".codex").join("commands"),
             SkillOrigin::LegacyCommandsDir,
         );
         push_unique_skill_root(
@@ -2866,11 +2830,11 @@ fn install_skill_into(
 }
 
 fn default_skill_install_root() -> std::io::Result<PathBuf> {
-    if let Ok(claw_config_home) = env::var("KRONON_CONFIG_HOME") {
-        return Ok(PathBuf::from(claw_config_home).join("skills"));
+    if let Ok(kronon_config_home) = env::var("KRONON_CONFIG_HOME") {
+        return Ok(PathBuf::from(kronon_config_home).join("skills"));
     }
-    if let Ok(codex_home) = env::var("CODEX_HOME") {
-        return Ok(PathBuf::from(codex_home).join("skills"));
+    if let Ok(kronon_home) = env::var("KRONON_HOME") {
+        return Ok(PathBuf::from(kronon_home).join("skills"));
     }
     if let Some(home) = env::var_os("HOME") {
         return Ok(PathBuf::from(home).join(".kronon").join("skills"));
@@ -3598,7 +3562,7 @@ fn render_skills_usage(unexpected: Option<&str>) -> String {
         "  Direct CLI       kronon skills [list|install <path>|help|<skill> [args]]".to_string(),
         "  Invoke           /skills help overview -> $help overview".to_string(),
         "  Install root     $KRONON_CONFIG_HOME/skills or ~/.kronon/skills".to_string(),
-        "  Sources          .kronon/skills, .omc/skills, .agents/skills, .codex/skills, .claude/skills, ~/.kronon/skills, ~/.omc/skills, ~/.claude/skills/omc-learned, ~/.codex/skills, ~/.claude/skills, legacy /commands".to_string(),
+        "  Sources          .kronon/skills, .omc/skills, .agents/skills, .claude/skills, ~/.kronon/skills, ~/.omc/skills, ~/.claude/skills/omc-learned, ~/.claude/skills, legacy /commands".to_string(),
     ];
     if let Some(args) = unexpected {
         lines.push(format!("  Unexpected       {args}"));
@@ -3620,12 +3584,10 @@ fn render_skills_usage_json(unexpected: Option<&str>) -> Value {
                 ".kronon/skills",
                 ".omc/skills",
                 ".agents/skills",
-                ".codex/skills",
                 ".claude/skills",
                 "~/.kronon/skills",
                 "~/.omc/skills",
                 "~/.claude/skills/omc-learned",
-                "~/.codex/skills",
                 "~/.claude/skills",
                 "legacy /commands",
                 "legacy fallback dirs still load automatically"
@@ -3739,15 +3701,11 @@ fn format_mcp_oauth(oauth: Option<&McpOAuthConfig>) -> String {
 
 fn definition_source_id(source: DefinitionSource) -> &'static str {
     match source {
-        DefinitionSource::ProjectClaw
-        | DefinitionSource::ProjectCodex
-        | DefinitionSource::ProjectClaude => "project_claw",
-        DefinitionSource::UserClawConfigHome | DefinitionSource::UserCodexHome => {
-            "user_claw_config_home"
+        DefinitionSource::ProjectKronon | DefinitionSource::ProjectClaude => "project_kronon",
+        DefinitionSource::UserKrononConfigHome | DefinitionSource::UserKrononHome => {
+            "user_kronon_config_home"
         }
-        DefinitionSource::UserClaw | DefinitionSource::UserCodex | DefinitionSource::UserClaude => {
-            "user_claw"
-        }
+        DefinitionSource::UserKronon | DefinitionSource::UserClaude => "user_kronon",
     }
 }
 
@@ -4732,7 +4690,7 @@ mod tests {
     #[test]
     fn lists_agents_from_project_and_user_roots() {
         let workspace = temp_dir("agents-workspace");
-        let project_agents = workspace.join(".codex").join("agents");
+        let project_agents = workspace.join(".kronon").join("agents");
         let user_home = temp_dir("agents-home");
         let user_agents = user_home.join(".claude").join("agents");
 
@@ -4759,8 +4717,8 @@ mod tests {
         );
 
         let roots = vec![
-            (DefinitionSource::ProjectCodex, project_agents),
-            (DefinitionSource::UserCodex, user_agents),
+            (DefinitionSource::ProjectKronon, project_agents),
+            (DefinitionSource::UserKronon, user_agents),
         ];
         let report =
             render_agents_report(&load_agents_from_roots(&roots).expect("agent roots should load"));
@@ -4780,9 +4738,9 @@ mod tests {
     #[test]
     fn renders_agents_reports_as_json() {
         let workspace = temp_dir("agents-json-workspace");
-        let project_agents = workspace.join(".codex").join("agents");
+        let project_agents = workspace.join(".kronon").join("agents");
         let user_home = temp_dir("agents-json-home");
-        let user_agents = user_home.join(".codex").join("agents");
+        let user_agents = user_home.join(".kronon").join("agents");
 
         write_agent(
             &project_agents,
@@ -4807,8 +4765,8 @@ mod tests {
         );
 
         let roots = vec![
-            (DefinitionSource::ProjectCodex, project_agents),
-            (DefinitionSource::UserCodex, user_agents),
+            (DefinitionSource::ProjectKronon, project_agents),
+            (DefinitionSource::UserKronon, user_agents),
         ];
         let report = render_agents_report_json(
             &workspace,
@@ -4827,7 +4785,7 @@ mod tests {
         assert_eq!(report["agents"][1]["name"], "verifier");
         assert_eq!(report["agents"][2]["name"], "planner");
         assert_eq!(report["agents"][2]["active"], false);
-        assert_eq!(report["agents"][2]["shadowed_by"]["id"], "project_claw");
+        assert_eq!(report["agents"][2]["shadowed_by"]["id"], "project_kronon");
 
         let help = handle_agents_slash_command_json(Some("help"), &workspace).expect("agents help");
         assert_eq!(help["kind"], "agents");
@@ -4846,10 +4804,10 @@ mod tests {
     #[test]
     fn lists_skills_from_project_and_user_roots() {
         let workspace = temp_dir("skills-workspace");
-        let project_skills = workspace.join(".codex").join("skills");
+        let project_skills = workspace.join(".kronon").join("skills");
         let project_commands = workspace.join(".claude").join("commands");
         let user_home = temp_dir("skills-home");
-        let user_skills = user_home.join(".codex").join("skills");
+        let user_skills = user_home.join(".kronon").join("skills");
 
         write_skill(&project_skills, "plan", "Project planning guidance");
         write_legacy_command(&project_commands, "deploy", "Legacy deployment guidance");
@@ -4858,7 +4816,7 @@ mod tests {
 
         let roots = vec![
             SkillRoot {
-                source: DefinitionSource::ProjectCodex,
+                source: DefinitionSource::ProjectKronon,
                 path: project_skills,
                 origin: SkillOrigin::SkillsDir,
             },
@@ -4868,7 +4826,7 @@ mod tests {
                 origin: SkillOrigin::LegacyCommandsDir,
             },
             SkillRoot {
-                source: DefinitionSource::UserCodex,
+                source: DefinitionSource::UserKronon,
                 path: user_skills,
                 origin: SkillOrigin::SkillsDir,
             },
@@ -4911,10 +4869,10 @@ mod tests {
     #[test]
     fn renders_skills_reports_as_json() {
         let workspace = temp_dir("skills-json-workspace");
-        let project_skills = workspace.join(".codex").join("skills");
+        let project_skills = workspace.join(".kronon").join("skills");
         let project_commands = workspace.join(".claude").join("commands");
         let user_home = temp_dir("skills-json-home");
-        let user_skills = user_home.join(".codex").join("skills");
+        let user_skills = user_home.join(".kronon").join("skills");
 
         write_skill(&project_skills, "plan", "Project planning guidance");
         write_legacy_command(&project_commands, "deploy", "Legacy deployment guidance");
@@ -4923,7 +4881,7 @@ mod tests {
 
         let roots = vec![
             SkillRoot {
-                source: DefinitionSource::ProjectCodex,
+                source: DefinitionSource::ProjectKronon,
                 path: project_skills,
                 origin: SkillOrigin::SkillsDir,
             },
@@ -4933,7 +4891,7 @@ mod tests {
                 origin: SkillOrigin::LegacyCommandsDir,
             },
             SkillRoot {
-                source: DefinitionSource::UserCodex,
+                source: DefinitionSource::UserKronon,
                 path: user_skills,
                 origin: SkillOrigin::SkillsDir,
             },
@@ -4946,10 +4904,10 @@ mod tests {
         assert_eq!(report["summary"]["active"], 3);
         assert_eq!(report["summary"]["shadowed"], 1);
         assert_eq!(report["skills"][0]["name"], "plan");
-        assert_eq!(report["skills"][0]["source"]["id"], "project_claw");
+        assert_eq!(report["skills"][0]["source"]["id"], "project_kronon");
         assert_eq!(report["skills"][1]["name"], "deploy");
         assert_eq!(report["skills"][1]["origin"]["id"], "legacy_commands_dir");
-        assert_eq!(report["skills"][3]["shadowed_by"]["id"], "project_claw");
+        assert_eq!(report["skills"][3]["shadowed_by"]["id"], "project_kronon");
 
         let help = handle_skills_slash_command_json(Some("help"), &workspace).expect("skills help");
         assert_eq!(help["kind"], "skills");
@@ -5318,7 +5276,7 @@ mod tests {
         assert!(report.contains(&install_root.display().to_string()));
 
         let roots = vec![SkillRoot {
-            source: DefinitionSource::UserCodexHome,
+            source: DefinitionSource::UserKrononHome,
             path: install_root.clone(),
             origin: SkillOrigin::SkillsDir,
         }];

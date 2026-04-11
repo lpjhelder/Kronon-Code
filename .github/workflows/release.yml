@@ -26,12 +26,12 @@ jobs:
         include:
           - name: linux-x64
             os: ubuntu-latest
-            bin: claw
-            artifact_name: claw-linux-x64
+            bin: kronon
+            artifact_name: kronon-linux-x64
           - name: macos-arm64
             os: macos-14
-            bin: claw
-            artifact_name: claw-macos-arm64
+            bin: kronon
+            artifact_name: kronon-macos-arm64
     defaults:
       run:
         working-directory: rust

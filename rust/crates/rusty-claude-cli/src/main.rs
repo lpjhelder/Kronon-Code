@@ -1353,7 +1353,7 @@ fn run_doctor(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::
 /// dispatched through [`tools::execute_tool`], so this server exposes exactly
 /// Read `.kronon/worker-state.json` from the current working directory and print it.
 /// This is the file-based worker observability surface: `push_event()` in `worker_boot.rs`
-/// atomically writes state transitions here so external observers (clawhip, orchestrators)
+/// atomically writes state transitions here so external observers (orchestrators)
 /// can poll current `WorkerStatus` without needing an HTTP route on the opencode binary.
 fn run_worker_state(output_format: CliOutputFormat) -> Result<(), Box<dyn std::error::Error>> {
     let cwd = env::current_dir()?;
@@ -10041,19 +10041,19 @@ UU conflicted.rs",
         git(&["init", "--quiet"], &root);
         git(&["config", "user.email", "tests@example.com"], &root);
         git(&["config", "user.name", "Rusty Claude Tests"], &root);
-        fs::write(root.join(".gitignore"), ".omx/\nignored.txt\n").expect("write gitignore");
+        fs::write(root.join(".gitignore"), ".forge/\nignored.txt\n").expect("write gitignore");
         fs::write(root.join("tracked.txt"), "hello\n").expect("write tracked");
         git(&["add", ".gitignore", "tracked.txt"], &root);
         git(&["commit", "-m", "init", "--quiet"], &root);
-        fs::create_dir_all(root.join(".omx")).expect("write omx dir");
-        fs::write(root.join(".omx").join("state.json"), "{}").expect("write ignored omx");
+        fs::create_dir_all(root.join(".forge")).expect("write forge dir");
+        fs::write(root.join(".forge").join("state.json"), "{}").expect("write ignored forge");
         fs::write(root.join("ignored.txt"), "secret\n").expect("write ignored file");
         fs::write(root.join("tracked.txt"), "hello\nworld\n").expect("write tracked change");
 
         let report = render_diff_report_for(&root).expect("diff report should render");
         assert!(report.contains("tracked.txt"));
         assert!(!report.contains("+++ b/ignored.txt"));
-        assert!(!report.contains("+++ b/.omx/state.json"));
+        assert!(!report.contains("+++ b/.forge/state.json"));
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }

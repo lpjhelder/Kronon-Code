@@ -17,12 +17,14 @@ FILES = [
 FILES.extend(sorted((ROOT / 'docs').rglob('*.md')) if (ROOT / 'docs').exists() else [])
 
 FORBIDDEN = {
-    r'github\.com/Yeachan-Heo/claw-code(?!-parity)': 'replace old claw-code GitHub links with ultraworkers/claw-code',
-    r'github\.com/code-yeongyu/claw-code': 'replace stale alternate claw-code GitHub links with ultraworkers/claw-code',
+    r'github\.com/Yeachan-Heo/claw-code(?!-parity)': 'replace old claw-code GitHub links with lpjhelder/Kronon-Code',
+    r'github\.com/code-yeongyu/claw-code': 'replace stale alternate claw-code GitHub links with lpjhelder/Kronon-Code',
+    r'github\.com/ultraworkers/claw-code': 'replace upstream claw-code GitHub links with lpjhelder/Kronon-Code or remove',
     r'discord\.gg/6ztZB9jvWq': 'replace the stale UltraWorkers Discord invite with the current invite',
-    r'api\.star-history\.com/svg\?repos=Yeachan-Heo/claw-code': 'update star-history embeds to ultraworkers/claw-code',
-    r'star-history\.com/#Yeachan-Heo/claw-code': 'update star-history links to ultraworkers/claw-code',
-    r'assets/clawd-hero\.jpeg': 'rename stale hero asset references to assets/claw-hero.jpeg',
+    r'api\.star-history\.com/svg\?repos=Yeachan-Heo/claw-code': 'update star-history embeds to lpjhelder/Kronon-Code',
+    r'star-history\.com/#Yeachan-Heo/claw-code': 'update star-history links to lpjhelder/Kronon-Code',
+    r'assets/clawd-hero\.jpeg': 'rename stale hero asset references to assets/kronon-hero.jpeg',
+    r'assets/claw-hero\.jpeg': 'rename claw-hero asset references to assets/kronon-hero.jpeg',
     r'assets/instructkr\.png': 'remove stale instructkr image references',
 }
 

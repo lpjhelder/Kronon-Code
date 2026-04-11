@@ -88,7 +88,7 @@ Primary artifacts:
 | Todo tracking | ✅ |
 | Notebook editing | ✅ |
 | CLAUDE.md / project memory | ✅ |
-| Config file hierarchy (`.claw.json` + merged config sections) | ✅ |
+| Config file hierarchy (`.kronon.json` + merged config sections) | ✅ |
 | Permission system | ✅ |
 | MCP server lifecycle + inspection | ✅ |
 | Session persistence + resume | ✅ |
@@ -118,7 +118,7 @@ Short names resolve to the latest model versions:
 Representative current surface:
 
 ```text
-claw [OPTIONS] [COMMAND]
+kronon [OPTIONS] [COMMAND]
 
 Flags:
   --model MODEL
@@ -164,7 +164,7 @@ The REPL now exposes a much broader surface than the original minimal shell:
 - automation / analysis: `/review`, `/advisor`, `/insights`, `/security-review`, `/subagent`, `/team`, `/telemetry`, `/providers`, `/cron`, and more
 - plugin management: `/plugin` (with aliases `/plugins`, `/marketplace`)
 
-Notable claw-first surfaces now available directly in slash form:
+Notable kronon-first surfaces now available directly in slash form:
 - `/skills [list|install <path>|help]`
 - `/agents [list|help]`
 - `/mcp [list|show <server>|help]`
@@ -187,7 +187,7 @@ rust/
     ├── mock-anthropic-service/ # Deterministic local Anthropic-compatible mock
     ├── plugins/            # Plugin metadata, manager, install/enable/disable surfaces
     ├── runtime/            # Session, config, permissions, MCP, prompts, auth/runtime loop
-    ├── rusty-claude-cli/   # Main CLI binary (`claw`)
+    ├── rusty-claude-cli/   # Main CLI binary (`kronon`)
     ├── telemetry/          # Session tracing and usage telemetry types
     └── tools/              # Built-in tools, skill resolution, tool search, agent runtime surfaces
 ```
@@ -208,7 +208,7 @@ rust/
 
 - **~20K lines** of Rust
 - **9 crates** in workspace
-- **Binary name:** `claw`
+- **Binary name:** `kronon`
 - **Default model:** `claude-opus-4-6`
 - **Default permissions:** `danger-full-access`
 

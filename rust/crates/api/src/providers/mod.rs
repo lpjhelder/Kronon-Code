@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     fn qwen_prefix_routes_to_dashscope_not_anthropic() {
-        // User request from Discord #clawcode-get-help: web3g wants to use
+        // User request from Discord #kronon-code-get-help: web3g wants to use
         // Qwen 3.6 Plus via native Alibaba DashScope API (not OpenRouter,
         // which has lower rate limits). metadata_for_model must route
         // qwen/* and bare qwen-* to the OpenAi provider kind pointed at

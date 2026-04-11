@@ -52,7 +52,7 @@ fn inventory_commands_emit_structured_json_when_requested() {
 
     let isolated_home = root.join("home");
     let isolated_config = root.join("config-home");
-    let isolated_codex = root.join("codex-home");
+    let isolated_kronon_home = root.join("kronon-home");
     fs::create_dir_all(&isolated_home).expect("isolated home should exist");
 
     let agents = assert_json_command_with_env(
@@ -65,8 +65,8 @@ fn inventory_commands_emit_structured_json_when_requested() {
                 isolated_config.to_str().expect("utf8 config home"),
             ),
             (
-                "CODEX_HOME",
-                isolated_codex.to_str().expect("utf8 codex home"),
+                "KRONON_HOME",
+                isolated_kronon_home.to_str().expect("utf8 kronon home"),
             ),
         ],
     );
@@ -92,11 +92,11 @@ fn inventory_commands_emit_structured_json_when_requested() {
 fn agents_command_emits_structured_agent_entries_when_requested() {
     let root = unique_temp_dir("agents-json-populated");
     let workspace = root.join("workspace");
-    let project_agents = workspace.join(".codex").join("agents");
+    let project_agents = workspace.join(".kronon").join("agents");
     let home = root.join("home");
-    let user_agents = home.join(".codex").join("agents");
+    let user_agents = home.join(".kronon").join("agents");
     let isolated_config = root.join("config-home");
-    let isolated_codex = root.join("codex-home");
+    let isolated_kronon_home = root.join("kronon-home");
     fs::create_dir_all(&workspace).expect("workspace should exist");
     write_agent(
         &project_agents,
@@ -130,8 +130,8 @@ fn agents_command_emits_structured_agent_entries_when_requested() {
                 isolated_config.to_str().expect("utf8 config home"),
             ),
             (
-                "CODEX_HOME",
-                isolated_codex.to_str().expect("utf8 codex home"),
+                "KRONON_HOME",
+                isolated_kronon_home.to_str().expect("utf8 kronon home"),
             ),
         ],
     );
@@ -142,12 +142,12 @@ fn agents_command_emits_structured_agent_entries_when_requested() {
     assert_eq!(parsed["summary"]["active"], 2);
     assert_eq!(parsed["summary"]["shadowed"], 1);
     assert_eq!(parsed["agents"][0]["name"], "planner");
-    assert_eq!(parsed["agents"][0]["source"]["id"], "project_claw");
+    assert_eq!(parsed["agents"][0]["source"]["id"], "project_kronon");
     assert_eq!(parsed["agents"][0]["active"], true);
     assert_eq!(parsed["agents"][1]["name"], "verifier");
     assert_eq!(parsed["agents"][2]["name"], "planner");
     assert_eq!(parsed["agents"][2]["active"], false);
-    assert_eq!(parsed["agents"][2]["shadowed_by"]["id"], "project_claw");
+    assert_eq!(parsed["agents"][2]["shadowed_by"]["id"], "project_kronon");
 }
 
 #[test]
@@ -362,7 +362,7 @@ fn assert_json_command(current_dir: &Path, args: &[&str]) -> Value {
 }
 
 fn assert_json_command_with_env(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Value {
-    let output = run_claw(current_dir, args, envs);
+    let output = run_kronon(current_dir, args, envs);
     assert!(
         output.status.success(),
         "stdout:\n{}\n\nstderr:\n{}",
@@ -372,8 +372,8 @@ fn assert_json_command_with_env(current_dir: &Path, args: &[&str], envs: &[(&str
     serde_json::from_slice(&output.stdout).expect("stdout should be valid json")
 }
 
-fn run_claw(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_claw"));
+fn run_kronon(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_kronon"));
     command.current_dir(current_dir).args(args);
     for (key, value) in envs {
         command.env(key, value);
@@ -382,7 +382,7 @@ fn run_claw(current_dir: &Path, args: &[&str], envs: &[(&str, &str)]) -> Output 
 }
 
 fn write_upstream_fixture(root: &Path) -> PathBuf {
-    let upstream = root.join("claw-code");
+    let upstream = root.join("kronon-code");
     let src = upstream.join("src");
     let entrypoints = src.join("entrypoints");
     fs::create_dir_all(&entrypoints).expect("upstream entrypoints dir should exist");

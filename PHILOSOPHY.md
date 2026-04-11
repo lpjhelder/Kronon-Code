@@ -4,7 +4,7 @@
 
 If you only look at the generated files in this repository, you are looking at the wrong layer.
 
-The Python rewrite was a byproduct. The Rust rewrite was also a byproduct. The real thing worth studying is the **system that produced them**: a clawhip-based coordination loop where humans give direction and autonomous claws execute the work.
+The Python rewrite was a byproduct. The Rust rewrite was also a byproduct. The real thing worth studying is the **system that produced them**: a kronon-hip-based coordination loop where humans give direction and autonomous kronons execute the work.
 
 Kronon Code is not just a codebase. It is a public demonstration of what happens when:
 
@@ -20,14 +20,14 @@ The important interface here is not tmux, Vim, SSH, or a terminal multiplexer.
 
 The real human interface is a Discord channel.
 
-A person can type a sentence from a phone, walk away, sleep, or do something else. The claws read the directive, break it into tasks, assign roles, write code, run tests, argue over failures, recover, and push when the work passes.
+A person can type a sentence from a phone, walk away, sleep, or do something else. The kronons read the directive, break it into tasks, assign roles, write code, run tests, argue over failures, recover, and push when the work passes.
 
-That is the philosophy: **humans set direction; claws perform the labor.**
+That is the philosophy: **humans set direction; kronons perform the labor.**
 
 ## The Three-Part System
 
-### 1. OmX (`oh-my-codex`)
-[oh-my-codex](https://github.com/Yeachan-Heo/oh-my-codex) provides the workflow layer.
+### 1. Kronon Forge
+[Kronon Forge](https://github.com/lpjhelder/kronon-forge) provides the workflow layer.
 
 It turns short directives into structured execution:
 - planning keywords
@@ -37,8 +37,8 @@ It turns short directives into structured execution:
 
 This is the layer that converts a sentence into a repeatable work protocol.
 
-### 2. clawhip
-[clawhip](https://github.com/Yeachan-Heo/clawhip) is the event and notification router.
+### 2. kronon-hip (event router)
+[Kronon Pulse](https://github.com/lpjhelder/kronon-pulse) is the event and notification router.
 
 It watches:
 - git commits
@@ -75,7 +75,7 @@ A fast agent team does not remove the need for thinking. It makes clear thinking
 Kronon Code demonstrates that a repository can be:
 
 - **autonomously built in public**
-- coordinated by claws/lobsters rather than human pair-programming alone
+- coordinated by kronons rather than human pair-programming alone
 - operated through a chat interface
 - continuously improved by structured planning/execution/review loops
 - maintained as a showcase of the coordination layer, not just the output files
@@ -103,7 +103,7 @@ The job of the human is to decide what deserves to exist.
 **Kronon Code is a demo of autonomous software development.**
 
 Humans provide direction.
-Claws coordinate, build, test, recover, and push.
+Kronons coordinate, build, test, recover, and push.
 The repository is the artifact.
 The philosophy is the system behind it.
 

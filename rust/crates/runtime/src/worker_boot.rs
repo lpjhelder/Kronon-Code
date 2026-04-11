@@ -573,7 +573,7 @@ fn push_event(
 }
 
 /// Write current worker state to `.kronon/worker-state.json` under the worker's cwd.
-/// This is the file-based observability surface: external observers (clawhip, orchestrators)
+/// This is the file-based observability surface: external observers (orchestrators)
 /// poll this file instead of requiring an HTTP route on the opencode binary.
 fn emit_state_file(worker: &Worker) {
     let state_dir = std::path::Path::new(&worker.cwd).join(".kronon");
@@ -592,7 +592,7 @@ fn emit_state_file(worker: &Worker) {
         prompt_in_flight: bool,
         last_event: Option<&'a WorkerEvent>,
         updated_at: u64,
-        /// Seconds since last state transition. Clawhip uses this to detect
+        /// Seconds since last state transition. Orchestrators use this to detect
         /// stalled workers without computing epoch deltas.
         seconds_since_update: u64,
     }

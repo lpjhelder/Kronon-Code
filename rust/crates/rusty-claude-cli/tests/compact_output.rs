@@ -28,7 +28,7 @@ fn compact_flag_prints_only_final_assistant_text_without_tool_call_details() {
 
     // when we run kronon in compact text mode against a tool-using scenario
     let prompt = format!("{SCENARIO_PREFIX}read_file_roundtrip");
-    let output = run_claw(
+    let output = run_kronon(
         &workspace,
         &config_home,
         &home,
@@ -94,7 +94,7 @@ fn compact_flag_streaming_text_only_emits_final_message_text() {
 
     // when we invoke kronon with --compact for the streaming text scenario
     let prompt = format!("{SCENARIO_PREFIX}streaming_text");
-    let output = run_claw(
+    let output = run_kronon(
         &workspace,
         &config_home,
         &home,
@@ -125,14 +125,14 @@ fn compact_flag_streaming_text_only_emits_final_message_text() {
     fs::remove_dir_all(&workspace).expect("workspace cleanup should succeed");
 }
 
-fn run_claw(
+fn run_kronon(
     cwd: &std::path::Path,
     config_home: &std::path::Path,
     home: &std::path::Path,
     base_url: &str,
     args: &[&str],
 ) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_claw"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_kronon"));
     command
         .current_dir(cwd)
         .env_clear()

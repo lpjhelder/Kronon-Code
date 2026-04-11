@@ -24,7 +24,7 @@ pub enum BaseCommitSource {
 
 /// Read the `.kronon-base` file from the given directory and return the trimmed
 /// commit hash, or `None` when the file is absent or empty.
-pub fn read_claw_base_file(cwd: &Path) -> Option<String> {
+pub fn read_kronon_base_file(cwd: &Path) -> Option<String> {
     let path = cwd.join(".kronon-base");
     let content = std::fs::read_to_string(path).ok()?;
     let trimmed = content.trim();
@@ -44,7 +44,7 @@ pub fn resolve_expected_base(flag_value: Option<&str>, cwd: &Path) -> Option<Bas
             return Some(BaseCommitSource::Flag(trimmed.to_string()));
         }
     }
-    read_claw_base_file(cwd).map(BaseCommitSource::File)
+    read_kronon_base_file(cwd).map(BaseCommitSource::File)
 }
 
 /// Verify that the worktree HEAD matches `expected_base`.
@@ -250,14 +250,14 @@ mod tests {
     }
 
     #[test]
-    fn reads_claw_base_file() {
+    fn reads_kronon_base_file() {
         // given
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create dir");
         fs::write(root.join(".kronon-base"), "abc1234def5678\n").expect("write .kronon-base");
 
         // when
-        let value = read_claw_base_file(&root);
+        let value = read_kronon_base_file(&root);
 
         // then
         assert_eq!(value, Some("abc1234def5678".to_string()));
@@ -265,13 +265,13 @@ mod tests {
     }
 
     #[test]
-    fn returns_none_for_missing_claw_base_file() {
+    fn returns_none_for_missing_kronon_base_file() {
         // given
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create dir");
 
         // when
-        let value = read_claw_base_file(&root);
+        let value = read_kronon_base_file(&root);
 
         // then
         assert!(value.is_none());
@@ -279,14 +279,14 @@ mod tests {
     }
 
     #[test]
-    fn returns_none_for_empty_claw_base_file() {
+    fn returns_none_for_empty_kronon_base_file() {
         // given
         let root = temp_dir();
         fs::create_dir_all(&root).expect("create dir");
         fs::write(root.join(".kronon-base"), "  \n").expect("write empty .kronon-base");
 
         // when
-        let value = read_claw_base_file(&root);
+        let value = read_kronon_base_file(&root);
 
         // then
         assert!(value.is_none());
@@ -386,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn matches_with_claw_base_file_in_real_repo() {
+    fn matches_with_kronon_base_file_in_real_repo() {
         // given
         let root = temp_dir();
         init_repo(&root);
@@ -403,7 +403,7 @@ mod tests {
     }
 
     #[test]
-    fn diverged_with_claw_base_file_after_new_commit() {
+    fn diverged_with_kronon_base_file_after_new_commit() {
         // given
         let root = temp_dir();
         init_repo(&root);

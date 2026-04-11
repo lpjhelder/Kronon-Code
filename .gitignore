@@ -1,8 +1,8 @@
 __pycache__/
 archive/
 .omx/
-.clawd-agents/
+.kronon-agents/
 # Claude Code local artifacts
 .claude/settings.local.json
 .claude/sessions/
-.claw/
+.kronon/
