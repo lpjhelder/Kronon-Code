@@ -179,16 +179,20 @@ impl SystemPromptBuilder {
             || "unknown".to_string(),
             |context| context.current_date.clone(),
         );
+        let os_name = self.os_name.as_deref().unwrap_or("unknown");
+        let os_version = self.os_version.as_deref().unwrap_or("unknown");
+        let shell_info = if os_name.eq_ignore_ascii_case("windows") {
+            "Shell: PowerShell (use Unix-style commands — ls, cat, rm, cp, mv, pwd all work via aliases; forward slashes in paths are OK)"
+        } else {
+            "Shell: sh/bash (standard POSIX commands)"
+        };
         let mut lines = vec!["# Environment context".to_string()];
         lines.extend(prepend_bullets(vec![
             format!("Model family: {FRONTIER_MODEL_NAME}"),
             format!("Working directory: {cwd}"),
             format!("Date: {date}"),
-            format!(
-                "Platform: {} {}",
-                self.os_name.as_deref().unwrap_or("unknown"),
-                self.os_version.as_deref().unwrap_or("unknown")
-            ),
+            format!("Platform: {os_name} {os_version}"),
+            shell_info.to_string(),
         ]));
         lines.join("\n")
     }

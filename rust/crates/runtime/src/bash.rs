@@ -201,8 +201,10 @@ fn prepare_command(
     }
 
     let mut prepared = if cfg!(windows) {
-        let mut cmd = Command::new("cmd.exe");
-        cmd.args(["/C", command]);
+        // PowerShell has Unix aliases (ls, cat, rm, cp, mv, pwd) so models
+        // trained on Unix commands work without modification.
+        let mut cmd = Command::new("powershell.exe");
+        cmd.args(["-NoProfile", "-NonInteractive", "-Command", command]);
         cmd
     } else {
         let mut cmd = Command::new("sh");
@@ -236,8 +238,10 @@ fn prepare_tokio_command(
     }
 
     let mut prepared = if cfg!(windows) {
-        let mut cmd = TokioCommand::new("cmd.exe");
-        cmd.args(["/C", command]);
+        // PowerShell has Unix aliases (ls, cat, rm, cp, mv, pwd) so models
+        // trained on Unix commands work without modification.
+        let mut cmd = TokioCommand::new("powershell.exe");
+        cmd.args(["-NoProfile", "-NonInteractive", "-Command", command]);
         cmd
     } else {
         let mut cmd = TokioCommand::new("sh");

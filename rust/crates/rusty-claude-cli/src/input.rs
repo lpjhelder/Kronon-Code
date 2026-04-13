@@ -149,13 +149,10 @@ impl LineEditor {
         match self.editor.readline(&self.prompt) {
             Ok(line) => Ok(ReadOutcome::Submit(line)),
             Err(ReadlineError::Interrupted) => {
-                let has_input = !self.current_line().is_empty();
+                // Ctrl+C always cancels: it clears input or aborts running work,
+                // but never exits the REPL. Use /exit or Ctrl+D to quit.
                 self.finish_interrupted_read()?;
-                if has_input {
-                    Ok(ReadOutcome::Cancel)
-                } else {
-                    Ok(ReadOutcome::Exit)
-                }
+                Ok(ReadOutcome::Cancel)
             }
             Err(ReadlineError::Eof) => {
                 self.finish_interrupted_read()?;
