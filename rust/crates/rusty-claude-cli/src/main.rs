@@ -6620,6 +6620,23 @@ impl AnthropicRuntimeClient {
         message_request: &MessageRequest,
         apply_stall_timeout: bool,
     ) -> Result<Vec<AssistantEvent>, RuntimeError> {
+        // Entering a new stream call. Reset the status bar into the
+        // "thinking" phase and bump the iteration counter when this is a
+        // post-tool continuation so the user can see "step N · after <tool>"
+        // instead of a stale counter frozen on the previous phase.
+        if let Some(h) = &self.status_bar {
+            if let Ok(mut s) = h.lock() {
+                if s.model.is_none() {
+                    s.model = Some(message_request.model.clone());
+                }
+                if apply_stall_timeout
+                    || !matches!(s.phase, status_bar::StatusPhase::Thinking)
+                {
+                    s.iteration = s.iteration.saturating_add(1);
+                    s.enter_phase(status_bar::StatusPhase::Thinking);
+                }
+            }
+        }
         let mut stream = self
             .client
             .stream_message(message_request)
@@ -6700,7 +6717,12 @@ impl AnthropicRuntimeClient {
                         if !text.is_empty() {
                             if let Some(h) = &self.status_bar {
                                 if let Ok(mut s) = h.lock() {
-                                    s.phase = status_bar::StatusPhase::Streaming;
+                                    if !matches!(
+                                        s.phase,
+                                        status_bar::StatusPhase::Streaming
+                                    ) {
+                                        s.enter_phase(status_bar::StatusPhase::Streaming);
+                                    }
                                     s.estimated_tokens += 1;
                                 }
                             }
@@ -6744,7 +6766,10 @@ impl AnthropicRuntimeClient {
                     if let Some((id, name, input)) = pending_tool.take() {
                         if let Some(h) = &self.status_bar {
                             if let Ok(mut s) = h.lock() {
-                                s.phase = status_bar::StatusPhase::ToolRunning(name.clone());
+                                s.enter_phase(status_bar::StatusPhase::ToolRunning(
+                                    name.clone(),
+                                ));
+                                s.last_tool = Some(name.clone());
                                 s.tool_log.push(status_bar::ToolActivity {
                                     name: name.clone(),
                                     summary: input.chars().take(60).collect(),

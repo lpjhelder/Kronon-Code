@@ -30,25 +30,46 @@ pub struct ToolActivity {
 pub struct StatusBarState {
     pub phase: StatusPhase,
     pub started_at: Instant,
+    /// Instant when the current phase started (resets on phase transitions so
+    /// per-phase elapsed counters stay honest across iterations).
+    pub phase_started_at: Instant,
     pub output_tokens: u32,
     pub estimated_tokens: u32,
     pub thinking_seconds: Option<f32>,
     pub tool_log: Vec<ToolActivity>,
+    /// 1-based iteration count inside a multi-step turn (model → tool → model → ...).
+    pub iteration: usize,
+    /// Short name of the last tool that ran, so the "thinking" phase can say
+    /// something meaningful like "processing grep_search result".
+    pub last_tool: Option<String>,
+    /// Resolved model id shown next to the elapsed counter.
+    pub model: Option<String>,
     /// True when the status bar line has been printed and needs clearing before content
     pub line_visible: bool,
 }
 
 impl StatusBarState {
     fn new() -> Self {
+        let now = Instant::now();
         Self {
             phase: StatusPhase::Thinking,
-            started_at: Instant::now(),
+            started_at: now,
+            phase_started_at: now,
             output_tokens: 0,
             estimated_tokens: 0,
             thinking_seconds: None,
             tool_log: Vec::new(),
+            iteration: 1,
+            last_tool: None,
+            model: None,
             line_visible: false,
         }
+    }
+
+    /// Atomically move to a new phase and reset the per-phase clock.
+    pub fn enter_phase(&mut self, phase: StatusPhase) {
+        self.phase = phase;
+        self.phase_started_at = Instant::now();
     }
 }
 
@@ -56,15 +77,48 @@ pub type StatusBarHandle = Arc<Mutex<StatusBarState>>;
 
 // --- Rendering ---
 
+fn thinking_verb(elapsed: u64, iteration: usize) -> &'static str {
+    match (iteration, elapsed) {
+        (1, 0..=9) => "Thinking...",
+        (1, 10..=29) => "Still thinking...",
+        (1, 30..=59) => "Waiting for model response...",
+        (1, _) => "Model is taking a while — still waiting...",
+        (_, 0..=9) => "Processing tool result...",
+        (_, 10..=29) => "Still processing tool result...",
+        (_, _) => "Waiting for model to continue...",
+    }
+}
+
 fn render_status_line(state: &StatusBarState, frame: usize) -> String {
     match &state.phase {
         StatusPhase::Thinking => {
-            let elapsed = state.started_at.elapsed().as_secs();
+            // Elapsed inside the *current* phase, so a long tool run does not
+            // inflate the "thinking" counter.
+            let elapsed = state.phase_started_at.elapsed().as_secs();
             let tone = ORANGE_PULSE[frame % ORANGE_PULSE.len()];
-            format!("\x1b[38;5;{tone}m\u{00b7} Thinking... ({elapsed}s)\x1b[0m")
+            let verb = thinking_verb(elapsed, state.iteration);
+            let model_suffix = state
+                .model
+                .as_deref()
+                .map(|m| format!(" \u{00b7} {m}"))
+                .unwrap_or_default();
+            let iter_suffix = if state.iteration > 1 {
+                format!(" \u{00b7} step {}", state.iteration)
+            } else {
+                String::new()
+            };
+            let tool_suffix = state
+                .last_tool
+                .as_deref()
+                .filter(|_| state.iteration > 1)
+                .map(|t| format!(" \u{00b7} after {t}"))
+                .unwrap_or_default();
+            format!(
+                "\x1b[38;5;{tone}m\u{00b7} {verb} ({elapsed}s{iter_suffix}{tool_suffix}{model_suffix})\x1b[0m"
+            )
         }
         StatusPhase::Streaming => {
-            let elapsed = state.started_at.elapsed().as_secs();
+            let elapsed = state.phase_started_at.elapsed().as_secs();
             let tokens = if state.output_tokens > 0 {
                 state.output_tokens
             } else {
@@ -75,14 +129,24 @@ fn render_status_line(state: &StatusBarState, frame: usize) -> String {
                 .thinking_seconds
                 .map(|s| format!(" \u{00b7} thought for {s:.0}s"))
                 .unwrap_or_default();
+            let iter_suffix = if state.iteration > 1 {
+                format!(" \u{00b7} step {}", state.iteration)
+            } else {
+                String::new()
+            };
             format!(
-                "\x1b[38;5;{tone}m\u{00b7} Transfiguring... ({elapsed}s \u{00b7} \u{2193} {tokens} tokens{thinking})\x1b[0m"
+                "\x1b[38;5;{tone}m\u{00b7} Responding... ({elapsed}s \u{00b7} \u{2193} {tokens} tokens{iter_suffix}{thinking})\x1b[0m"
             )
         }
         StatusPhase::ToolRunning(name) => {
-            let elapsed = state.started_at.elapsed().as_secs();
+            let elapsed = state.phase_started_at.elapsed().as_secs();
+            let iter_suffix = if state.iteration > 1 {
+                format!(" \u{00b7} step {}", state.iteration)
+            } else {
+                String::new()
+            };
             format!(
-                "\x1b[32m\u{25cf}\x1b[0m \x1b[38;5;208m{name} ({elapsed}s)\x1b[0m"
+                "\x1b[32m\u{25cf}\x1b[0m \x1b[38;5;208m{name} ({elapsed}s{iter_suffix})\x1b[0m"
             )
         }
         StatusPhase::Done => {
@@ -237,7 +301,7 @@ impl StatusBar {
         self.stop_heartbeat();
         let _guard = self.output_lock.lock().unwrap();
         let mut state = self.handle.lock().unwrap();
-        state.phase = StatusPhase::Done;
+        state.enter_phase(StatusPhase::Done);
         let line = render_status_line(&state, 0);
         let mut stdout = io::stdout();
         if state.line_visible {
@@ -253,7 +317,7 @@ impl StatusBar {
         self.stop_heartbeat();
         let _guard = self.output_lock.lock().unwrap();
         let mut state = self.handle.lock().unwrap();
-        state.phase = StatusPhase::Error(msg.to_string());
+        state.enter_phase(StatusPhase::Error(msg.to_string()));
         let line = render_status_line(&state, 0);
         let mut stdout = io::stdout();
         if state.line_visible {
