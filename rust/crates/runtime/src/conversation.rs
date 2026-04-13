@@ -319,6 +319,12 @@ where
                 return Err(error);
             }
 
+            if self.hook_abort_signal.is_aborted() {
+                let error = RuntimeError::new("conversation cancelled by user");
+                self.record_turn_failed(iterations, &error);
+                return Err(error);
+            }
+
             let request = ApiRequest {
                 system_prompt: self.system_prompt.clone(),
                 messages: self.session.messages.clone(),

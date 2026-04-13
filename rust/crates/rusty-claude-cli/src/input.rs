@@ -115,6 +115,9 @@ impl LineEditor {
         editor.set_helper(Some(SlashCommandHelper::new(completions)));
         editor.bind_sequence(KeyEvent(KeyCode::Char('J'), Modifiers::CTRL), Cmd::Newline);
         editor.bind_sequence(KeyEvent(KeyCode::Enter, Modifiers::SHIFT), Cmd::Newline);
+        // ESC mirrors Ctrl+C: cancels the pending input / pending action without
+        // exiting the REPL.
+        editor.bind_sequence(KeyEvent(KeyCode::Esc, Modifiers::NONE), Cmd::Interrupt);
 
         Self {
             prompt: prompt.into(),

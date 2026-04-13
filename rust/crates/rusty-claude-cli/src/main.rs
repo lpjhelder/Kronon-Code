@@ -19,6 +19,7 @@ use std::net::TcpListener;
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -124,6 +125,37 @@ Run `kronon --help` for usage."
     }
 }
 
+/// Global Ctrl+C cancellation flag.
+///
+/// Incremented by the platform signal handler so streaming/tool loops can
+/// observe the request and abort without the process itself exiting. The
+/// handler is installed once at startup; subsequent Ctrl+C presses only
+/// bump the counter, they never terminate the CLI.
+static CTRL_C_PRESSED: AtomicUsize = AtomicUsize::new(0);
+
+fn install_ctrl_c_handler() {
+    // Safe to ignore Err: the only failure mode is "handler already
+    // installed", which happens when tests run the CLI entrypoint twice in
+    // the same process.
+    let _ = ctrlc::set_handler(|| {
+        CTRL_C_PRESSED.fetch_add(1, Ordering::SeqCst);
+    });
+}
+
+/// Returns how many Ctrl+C presses have been observed since the given
+/// baseline. Used by `HookAbortMonitor` to detect new cancel requests that
+/// occurred after a runtime turn started.
+fn ctrl_c_pressed_since(baseline: usize) -> usize {
+    let current = CTRL_C_PRESSED.load(Ordering::SeqCst);
+    current.saturating_sub(baseline)
+}
+
+/// Captures the current Ctrl+C press count so a subsequent
+/// `ctrl_c_pressed_since` call can determine whether *new* presses occurred.
+fn ctrl_c_baseline() -> usize {
+    CTRL_C_PRESSED.load(Ordering::SeqCst)
+}
+
 /// Read piped stdin content when stdin is not a terminal.
 ///
 /// Returns `None` when stdin is attached to a terminal (interactive REPL use),
@@ -164,6 +196,7 @@ fn merge_prompt_with_stdin(prompt: &str, stdin_content: Option<&str>) -> String 
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
+    install_ctrl_c_handler();
     let args: Vec<String> = env::args().skip(1).collect();
     match parse_args(&args)? {
         CliAction::DumpManifests { output_format } => dump_manifests(output_format)?,
@@ -2812,7 +2845,7 @@ fn run_repl(
                 cli.run_turn(&trimmed)?;
             }
             input::ReadOutcome::Cancel => {
-                println!("(use /exit or Ctrl-D to quit)");
+                println!("(cancelled — use /exit or Ctrl-D to quit)");
             }
             input::ReadOutcome::Exit => {
                 cli.persist_session()?;
@@ -3279,28 +3312,25 @@ struct HookAbortMonitor {
 
 impl HookAbortMonitor {
     fn spawn(abort_signal: runtime::HookAbortSignal) -> Self {
+        let baseline = ctrl_c_baseline();
         Self::spawn_with_waiter(abort_signal, move |stop_rx, abort_signal| {
-            let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            else {
-                return;
-            };
-
-            runtime.block_on(async move {
-                let wait_for_stop = tokio::task::spawn_blocking(move || {
-                    let _ = stop_rx.recv();
-                });
-
-                tokio::select! {
-                    result = tokio::signal::ctrl_c() => {
-                        if result.is_ok() {
-                            abort_signal.abort();
-                        }
-                    }
-                    _ = wait_for_stop => {}
+            // Poll the global Ctrl+C counter. When the counter moves past the
+            // baseline captured at spawn time, the user pressed Ctrl+C/Esc
+            // after this monitor started — propagate the cancel to the
+            // runtime's abort signal. We poll instead of using tokio::signal
+            // because the global ctrlc crate handler already owns SIGINT on
+            // Windows (cmd.exe / PowerShell would otherwise kill the process
+            // before tokio could observe it).
+            loop {
+                match stop_rx.recv_timeout(Duration::from_millis(50)) {
+                    Ok(()) | Err(RecvTimeoutError::Disconnected) => return,
+                    Err(RecvTimeoutError::Timeout) => {}
                 }
-            });
+                if ctrl_c_pressed_since(baseline) > 0 {
+                    abort_signal.abort();
+                    return;
+                }
+            }
         })
     }
 
@@ -4696,7 +4726,7 @@ fn render_repl_help() -> String {
         "  Up/Down              Navigate prompt history".to_string(),
         "  Ctrl-R               Reverse-search prompt history".to_string(),
         "  Tab                  Complete commands, modes, and recent sessions".to_string(),
-        "  Ctrl-C               Cancel current action or clear input (never exits)".to_string(),
+        "  Ctrl-C / Esc         Cancel current action or clear input (never exits)".to_string(),
         "  Shift+Enter/Ctrl+J   Insert a newline".to_string(),
         "  Auto-save            .kronon/sessions/<session-id>.jsonl".to_string(),
         "  Resume latest        /resume latest".to_string(),
