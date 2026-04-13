@@ -203,8 +203,20 @@ fn prepare_command(
     let mut prepared = if cfg!(windows) {
         // PowerShell has Unix aliases (ls, cat, rm, cp, mv, pwd) so models
         // trained on Unix commands work without modification.
+        //
+        // -ExecutionPolicy Bypass is scoped to this process only (does not
+        // change the user's global PowerShell policy). Without it, tools
+        // installed as PowerShell wrapper scripts (npm, pnpm, yarn, etc.)
+        // fail with "UnauthorizedAccess / running scripts is disabled".
         let mut cmd = Command::new("powershell.exe");
-        cmd.args(["-NoProfile", "-NonInteractive", "-Command", command]);
+        cmd.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ]);
         cmd
     } else {
         let mut cmd = Command::new("sh");
@@ -240,8 +252,20 @@ fn prepare_tokio_command(
     let mut prepared = if cfg!(windows) {
         // PowerShell has Unix aliases (ls, cat, rm, cp, mv, pwd) so models
         // trained on Unix commands work without modification.
+        //
+        // -ExecutionPolicy Bypass is scoped to this process only (does not
+        // change the user's global PowerShell policy). Without it, tools
+        // installed as PowerShell wrapper scripts (npm, pnpm, yarn, etc.)
+        // fail with "UnauthorizedAccess / running scripts is disabled".
         let mut cmd = TokioCommand::new("powershell.exe");
-        cmd.args(["-NoProfile", "-NonInteractive", "-Command", command]);
+        cmd.args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command",
+            command,
+        ]);
         cmd
     } else {
         let mut cmd = TokioCommand::new("sh");
